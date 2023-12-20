@@ -2,6 +2,9 @@
 
 This weekly seminar series started in January 2021
 
+The videos posted on youtube - search for Lev Selector
+ - https://www.youtube.com/@lev-selector
+
 Slides usually in PowerPoint format.
 
 PDF versions of some of files are placed <br>
