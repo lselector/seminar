@@ -1,0 +1,523 @@
+-- SQL examples used in the presentation.
+---------------------------------------------------
+-- The database used in these examples (TSQLV4 DB)
+-- can be forked in the query from this link:
+--   https://tsql.lucient.com/resources/
+---------------------------------------------------
+
+-- ISLAND PROBLEM
+
+-- Create Sample Data
+
+SET NOCOUNT ON;
+USE TSQLV4;
+DROP TABLE IF EXISTS dbo.T1;
+
+GO
+CREATE TABLE dbo.T1
+(
+	col1 INT NOT NULL
+	CONSTRAINT PK_T1 PRIMARY KEY
+);
+INSERT INTO dbo.T1(col1)
+VALUES(2),(3),(11),(12),(13),(27),(33),(34),(35),(42);
+
+
+-- Conventional Approach
+
+-- 1. Find Group idenitfier
+-- 2. Group result by this identifier
+-- 3. Return min and max values for each group as start and end values
+
+
+-- 1. Find group identifier
+SELECT col1,
+	(SELECT MIN(B.col1)
+	 FROM dbo.T1 AS B
+	 WHERE B.col1 >= A.col1
+-- is this row the last in its group?
+	AND NOT EXISTS
+	  (SELECT *
+	   FROM dbo.T1 AS C
+	   WHERE C.col1 = B.col1 + 1)) AS grp
+FROM dbo.T1 AS A;
+
+-- 2. Group by grp identifier and 3. Find min and max values
+
+SELECT MIN(col1) AS startrange, MAX(col1) AS endrange
+FROM (SELECT col1,
+		(SELECT MIN(B.col1)
+		 FROM dbo.T1 AS B
+		 WHERE B.col1 >= A.col1
+		 AND NOT EXISTS
+		 (SELECT *
+		  FROM dbo.T1 AS C
+		  WHERE C.col1 = B.col1 + 1)) AS grp
+	  FROM dbo.T1 AS A) AS D
+GROUP BY grp;
+
+-- works but horribly slow
+-- for each row, SQL almost scans data twice completely
+
+
+
+
+-- Window Function Solution
+
+-- 1. Calculate row number based on col1 values
+
+SELECT col1, col1 - ROW_NUMBER() OVER(ORDER BY col1) AS rownum
+FROM dbo.T1;
+
+
+
+
+
+
+
+
+-- 2. What's next? Note the difference between the islands! There is our group identifier
+
+
+WITH C AS
+ (
+	SELECT col1,
+	-- the difference is constant and unique per island
+	col1 - ROW_NUMBER() OVER(ORDER BY col1) AS grp
+	FROM dbo.T1
+ )
+SELECT MIN(col1) AS startrange, MAX(col1) AS endrange
+FROM C
+GROUP BY grp;
+
+-- nice syntax, and also scales better (linearly)
+
+
+
+
+
+
+
+
+-- Aggregate Functions Partitioning
+
+/*
+-General Form for window aggregates
+
+function_name(<arguments>) OVER(
+	[ <window partition clause> ]
+	[ <window order clause> [ <window frame clause> ] ] )
+
+*/
+
+-- Simple Partitioning
+
+
+Select orderid, custid, val,
+	SUM(val) OVER() as sumall,
+	SUM(VAL) OVER(PARTITION BY custid) as sumcust
+FROM Sales.OrderValues;
+
+
+
+-- Calcualte percentage of grand total
+
+SELECT orderid, custid, val,
+CAST(100. * val / SUM(val) OVER() AS NUMERIC(5, 2)) AS pctall,
+CAST(100. * val / SUM(val) OVER(PARTITION BY custid) AS NUMERIC(5, 2)) AS pctcust
+FROM Sales.OrderValues;
+
+
+-- Window Ordering and Framing
+-- With Rows Option, with RANGE Option
+
+SELECT empid, ordermonth, qty,
+	SUM(qty) OVER(PARTITION BY empid
+				  ORDER BY ordermonth
+				  ROWS BETWEEN UNBOUNDED PRECEDING     -- mention shortcut 'ROWS UNBOUNDED PRECEDING'
+				  AND CURRENT ROW) AS runqty
+FROM Sales.EmpOrders;
+
+-- More detailed look at different frames
+
+SELECT empid, ordermonth,
+	MAX(qty) OVER(PARTITION BY empid    -- note that MAX could have also been MIN(qty). it's artificial here
+				  ORDER BY ordermonth
+				  ROWS BETWEEN 1 PRECEDING
+				  AND 1 PRECEDING) AS prvqty,
+	qty AS curqty,
+	MAX(qty) OVER(PARTITION BY empid
+				  ORDER BY ordermonth
+				  ROWS BETWEEN 1 FOLLOWING   -- we will cover offset functions later, for now this is a work around
+				  AND 1 FOLLOWING) AS nxtqty,
+	AVG(qty) OVER(PARTITION BY empid
+				  ORDER BY ordermonth
+				  ROWS BETWEEN 1 PRECEDING
+				  AND 1 FOLLOWING) AS avgqty
+FROM Sales.EmpOrders; -- always results in same output
+
+
+
+
+
+
+/*
+
+RANGE OPTION: mention but do not go into detail. More important ideas for intro to cover
+
+partially implemented in SQL Server, only supports UNBOUNDED and CURRENT ROW
+
+Why range?
+
+ROW Option Purpose: “Give me the total quantities for the last three points of activity"
+RANGE Option Purpose: "Give me the total quantities for the period starting two months before the current period and until
+					   the current period"
+
+*/
+
+
+
+-- RANKING Functions
+
+-- ROW_NUMBER
+-- computes sequential row number, starting with 1, within the respetive window partition
+
+SELECT orderid, val,
+	ROW_NUMBER() OVER(ORDER BY orderid) AS rownum
+FROM Sales.OrderValues;
+
+-- ordering is arbitrary here, good practice to add ORDER BY clause outside of window function
+
+SELECT orderid, val,
+	ROW_NUMBER() OVER(ORDER BY orderid) AS rownum
+FROM Sales.OrderValues
+ORDER BY rownum;
+
+-- workaround with COUNT()
+SELECT orderid, val,
+	COUNT(*) OVER(ORDER BY orderid
+				  ROWS UNBOUNDED PRECEDING) AS rownum
+FROM Sales.OrderValues;
+
+-- NTILE
+-- allows you to arrange rows within partition in roughly equally sized tiles
+-- usually done for analytical purposes
+
+SELECT orderid, val,
+	ROW_NUMBER() OVER(ORDER BY val) AS rownum,
+	NTILE(10) OVER(ORDER BY val) AS tile
+FROM Sales.OrderValues;
+--note: there are 830 rows => 10 tiles = 83 rows per tile 
+-- paging: page size is constant and number of pages is dynamic
+-- tiling: tile size is dynamic and number of tiles is constant
+-- maybe show example with inequal tiles (use tiles = 100)
+
+
+-- page number example
+-- page number with a page size of 10
+SELECT orderid, val,
+	ROW_NUMBER() OVER(ORDER BY val) AS rownum,
+	(ROW_NUMBER() OVER(ORDER BY val) - 1) / 10 + 1 AS pagenum
+FROM Sales.OrderValues;
+--explain
+Select (11-1) / 10 + 1;
+
+
+-- RANK and DENSE_RANK
+-- similar to ROW_NUMBER, but do not have to produce unique results within partition
+-- Example comparing the three
+
+SELECT orderid, orderdate, val,
+	ROW_NUMBER() OVER(ORDER BY orderdate DESC) AS rownum,
+	RANK() OVER(ORDER BY orderdate DESC) AS rnk,
+	DENSE_RANK() OVER(ORDER BY orderdate DESC) AS drnk
+FROM Sales.OrderValues;
+
+
+-- STATISTICAL Functions
+
+-- Rank Distribution Functions: PERCENT_RANK() & CUME_DIST
+-- Inverse Distribution Functions: PERCENTILE_CONT and PERCENTILE_DISC
+
+-- showcase score table used for examples
+
+SELECT *
+FROM Stats.Scores;
+
+/*
+-- Distribution functions
+compute relative rank of a row in the window partition, expressed as a ratio between 0 and 1 (percentage)
+
+
+Calculation:
+
+rk = RANK of the row using in the same window as the distribution function's window specification
+nr = number of rows in window partition
+np = number of rows that precede or are peers of current row
+
+THEN
+
+PERCENT_RANK() = (rk-1)/(nr-1)
+CUME_DIST() = np / nr    (the probability that X will take a value less than or equal to x)
+
+*/
+
+SELECT testid, studentid, score,
+	PERCENT_RANK() OVER(PARTITION BY testid ORDER BY score) AS percentrank,
+	CUME_DIST() OVER(PARTITION BY testid ORDER BY score) AS cumedist
+FROM Stats.Scores;
+
+-- For fun, getting same results without these two functions, but with a correlated subquery
+
+WITH C AS
+ (
+	SELECT testid, studentid, score,
+		RANK() OVER(PARTITION BY testid ORDER BY score) AS rk,
+		COUNT(*) OVER(PARTITION BY testid) AS nr
+	FROM Stats.Scores
+ )
+SELECT testid, studentid, score,
+	1.0 * (rk - 1) / (nr - 1) AS percentrank,   -- multiply by one to force implicit conversion of the integer operands to numeric
+	1.0 * (SELECT COALESCE(MIN(C2.rk) - 1, C1.nr) -- so we do not get integer division
+		   FROM C AS C2
+		   WHERE C2.testid = C1.testid
+		   AND C2.rk > C1.rk) / nr AS cumedist
+FROM C AS C1;
+
+
+-- Inverse Distribution Functions (percentiles)
+-- accept percentage as input, and return value from the group
+-- Ex: 50th Percentile
+
+/*
+Syntax:
+- slightly different than RANK Distribution Functions
+- uses WITHIN GROUP clause
+- actuall a type of ordered set function, but we'll cover it here anyways
+
+
+PERCENTILE_DISC:
+
+- returns first value in the group whose cumulative distribution is greater than or equal to the input,
+  assuming you treat the group as a window partition
+
+*/
+
+-- Example:
+
+DECLARE @pct AS FLOAT = 0.1;
+
+SELECT testid, studentid, score,
+
+	PERCENTILE_DISC(@pct) WITHIN GROUP(ORDER BY score)
+			OVER(PARTITION BY testid) AS percentiledisc,
+
+	PERCENTILE_CONT(@pct) WITHIN GROUP(ORDER BY score)   -- there is some interpolation going on. that's why
+			OVER(PARTITION BY testid) AS percentilecont  -- values are slightly different. Do not go into detail here
+FROM Stats.Scores;
+
+
+-- OFFSET Functions
+
+-- Category One: Relative to current row (LEAD & LAG)
+-- support partitioning and ordering clauses
+
+
+-- Category Two: Relative to start or end of frame (FIRST_VALUE & LAST_VALUE)
+-- support partitioning, ordering, and framing clauses
+
+-- LAG and LEAD Examples:
+-- allow you to return offsetted value from current row in partition (default offset = 1)
+
+SELECT custid, orderdate, orderid, val,
+	LAG(val) OVER(PARTITION BY custid      -- note implicit offset of one
+				  ORDER BY orderdate, orderid) AS prevval,
+	LEAD(val, 2, 9.99) OVER(PARTITION BY custid   -- note null replacement here
+				  ORDER BY orderdate, orderid) AS nextval
+FROM Sales.OrderValues;
+
+
+-- FIRST_VALUE & LAST_VALUE Examples
+-- return value expression from first and last value expression of frame respectively
+
+SELECT custid, orderdate, orderid, val,
+	FIRST_VALUE(val) OVER(PARTITION BY custid
+						  ORDER BY orderdate, orderid
+						  ROWS BETWEEN UNBOUNDED PRECEDING
+						  AND CURRENT ROW) AS val_firstorder,
+	LAST_VALUE(val) OVER(PARTITION BY custid
+					     ORDER BY orderdate, orderid
+						 ROWS BETWEEN CURRENT ROW
+						 AND UNBOUNDED FOLLOWING) AS val_lastorder -- note that you cannot rely on default here
+FROM Sales.OrderValues											   -- because last row in the frame is current row
+ORDER BY custid, orderdate, orderid;
+
+
+-- usually there is some comparison involved
+SELECT custid, orderdate, orderid, val,
+	val - FIRST_VALUE(val) OVER(PARTITION BY custid
+							    ORDER BY orderdate, orderid
+								ROWS BETWEEN UNBOUNDED PRECEDING
+								AND CURRENT ROW) AS difffirst,
+	val - LAST_VALUE(val) OVER(PARTITION BY custid
+							   ORDER BY orderdate, orderid
+							   ROWS BETWEEN CURRENT ROW
+						       AND UNBOUNDED
+							   FOLLOWING) AS difflast
+FROM Sales.OrderValues
+ORDER BY custid, orderdate, orderid;
+
+
+
+-- CH 3: Ordered Set Functions
+-- only STRING_AGG implemented in SQL Server
+-- this will only show some workarounds on how to achieve similar functionality in SQL Server
+
+-- 3 Types: string_concatenation, hypothetical set functions, and inverse distribution functions
+
+-- General Syntax:
+/*
+<ordered set function> WITHIN GROUP ( ORDER BY <sort
+									  specification list> )
+*/
+
+
+-- 3.1 Hypothetical Set Functions
+
+-- include rank and rank_dist functions from above, this time applied to group in hypothetical manner
+
+-- Example with RANK():
+
+SELECT orderid, custid, val,
+	RANK() OVER(PARTITION BY custid ORDER BY val) AS rnk   -- straightforward
+FROM Sales.OrderValues;
+
+-- NOW: Into play comes the 'WHAT-IF'- Analysis
+-- “How would an input value @val rank in each customer group with respect
+-- to the other values in the val column?”
+
+-- for instance, how would the input value of @val = 1000 rank relative to each custid?
+-- output should return one row per partition with output being the rank
+
+-- this is how it's done in SQL Standard (maybe show output, page 199)
+DECLARE @val AS NUMERIC(12, 2) = 1000.00;
+
+SELECT custid,
+	RANK(@val) WITHIN GROUP(ORDER BY val) AS rnk   -- does not work in T-SQL
+FROM Sales.OrderValues
+GROUP BY custid;
+
+-- Workaround 
+DECLARE @val AS NUMERIC(12, 2) = 1000.00;
+
+SELECT custid,
+	COUNT(CASE WHEN val < @val THEN 1 END) + 1 AS rnk
+FROM Sales.OrderValues
+GROUP BY custid;
+
+-- Example with DENSE_RANK():
+
+-- SQL Standard - not working with T-SQL
+DECLARE @val AS NUMERIC(12, 2) = 1000.00;
+
+SELECT custid,
+	DENSE_RANK(@val) WITHIN GROUP(ORDER BY val) AS densernk
+FROM Sales.OrderValues
+GROUP BY custid;
+
+-- T-SQL Workaround:
+
+DECLARE @val AS NUMERIC(12, 2) = 1000.00;
+
+SELECT custid,
+	COUNT(DISTINCT CASE WHEN val < @val THEN val END) + 1 AS
+densernk
+FROM Sales.OrderValues
+GROUP BY custid;
+
+
+-- Example PERCENT_RANK():
+
+-- SQL Standard (not working again of course)
+-- "Given an input test score, what percentage would that result in in all groups"
+
+-- SQL Standard: Does not work again obviously.
+DECLARE @score AS TINYINT = 80;
+
+SELECT testid,
+	PERCENT_RANK(@score) WITHIN GROUP(ORDER BY score) AS pctrank
+FROM Stats.Scores
+GROUP BY testid;
+
+-- T-SQL workaround
+
+DECLARE @score AS TINYINT = 80;
+
+WITH C AS
+(
+	SELECT testid,
+		COUNT(CASE WHEN score < 80 THEN 1 END) + 1 AS rk,  -- relative rank within partition
+		COUNT(*) + 1 AS nr								   -- number of rows plus 1
+	FROM Stats.Scores
+	GROUP BY testid
+)
+SELECT testid, rk, nr, 1.0 * (rk - 1) / (nr - 1) AS pctrank
+FROM C;
+
+
+-- Example CUME_DIST:
+
+-- SQL Standard:
+DECLARE @score AS TINYINT = 80;
+
+SELECT testid,
+	CUME_DIST(@score) WITHIN GROUP(ORDER BY score) AS cumedist
+FROM Stats.Scores
+GROUP BY testid;
+
+-- T-SQL Workaround: notice the similarity to above solution
+DECLARE @score AS TINYINT = 80;
+WITH C AS
+(
+	SELECT testid,
+		COUNT(CASE WHEN score <= @score THEN 1 END) + 1 AS np,
+		COUNT(*) + 1 AS nr
+	FROM Stats.Scores
+	GROUP BY testid
+)
+SELECT testid, 1.0 * np / nr AS cumedist
+FROM C;
+
+
+
+-- INVERSE DISTRIBUTION SET FUNCTIONS
+-- pretty much do the opposite of PERCENT_RANK & CUME_DIST
+-- given percentage, find value
+
+
+-- Output with window functions:
+DECLARE @pct AS FLOAT = 0.5;
+
+SELECT DISTINCT testid,
+	PERCENTILE_DISC(@pct) WITHIN GROUP(ORDER BY score)
+						  OVER(PARTITION BY testid) AS percentiledisc,
+	PERCENTILE_CONT(@pct) WITHIN GROUP(ORDER BY score)
+						  OVER(PARTITION BY testid) AS percentilecont
+FROM Stats.Scores;
+-- notice the duplication. Need to avoid
+-- 
+-- SQL Standard: does not work
+DECLARE @pct AS FLOAT = 0.5;
+
+SELECT testid,
+	PERCENTILE_DISC(@pct) WITHIN GROUP(ORDER BY score) AS percentiledisc,
+	PERCENTILE_CONT(@pct) WITHIN GROUP(ORDER BY score) AS percentilecont
+FROM Stats.Scores
+GROUP BY testid;
+
+
+-- TSQ-Workaround
+
+-- Grab DISTINCT id, remove score
+
+

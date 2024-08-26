@@ -1,0 +1,336 @@
+digraph {
+    rankdir=TB
+    node[
+        shape=square
+        style=filled
+    ]
+
+    // onprem[
+    //     label="On-premise"
+    // ]
+    // subgraph cluster0_top_level{
+    //     label="On-Premise Systems"
+
+    //     node[
+    //         label="gateway"
+    //     ]
+
+    // }
+
+    subgraph cluster0_onprem{
+        label="on-premise"
+        style=filled
+        color=lightgreen
+
+        onprem_gateway[
+            label="on-premise gateway"
+            shape=rectangle
+        ]
+    }
+
+    subgraph cluster01_cloud{
+
+    }
+
+    subgraph cluster02_public{
+        external_traffic[
+            label="External\nTraffic"
+        ]
+    }
+
+    subgraph cluster2_org{
+        label="Organization"
+
+        subgraph cluster3_folder{
+            label="Folder"
+        
+            subgraph cluster1_gcp1{
+                label="Project1"
+                style=filled
+                color=lightblue
+
+                subgraph cluster8_network{
+                    label="Networking"
+                    color="indigo"
+                    fontcolor="white"
+
+                    gcp_gateway [
+                        label="GCP gateway"
+                        shape=rectangle
+                    ]
+
+                    subgraph cluster80_loadBalancers{
+                        label="Load Balancers"
+
+                        subgraph cluster800_extLoadBalancers{
+                            {rank=same; extcp exhttp exudp exicmp}
+                            {rank=same; http_lb ext_loadbal ssl_proxy tcp_proxy}
+                            label="External Load Balancers"
+                            shape="rectangle"
+                            color=darkred
+
+                            exhttp[
+                                label="HTTP/S\nTraffic"
+                            ]
+
+                            extcp[
+                                label="TCP\nTraffic"
+                            ]
+
+                            exudp[
+                                label="UDP\nTraffic"
+                            ]
+
+                            exicmp[
+                                label="ICMP\nTraffic"
+                            ]
+
+                            http_lb[
+                                label="HTTP(S)\nLoad Balancer"
+                                shape=rectangle
+                            ]
+
+                            ssl_proxy[
+                                label="SSL Proxy"
+                                shape=rectangle
+                            ]
+
+                            tcp_proxy[
+                                label="TCP Proxy"
+                                shape=rectangle
+                            ]
+
+                            ext_loadbal[
+                                label="External Network\nLoad Balancer"
+                                shape=rectangle
+                            ]
+
+                            ssl_offload[
+                                label="SSL\nOffload?"
+                                shape=diamond
+                            ]
+
+                            ext_ipv6[
+                                label="Global LB\nIPv6?"
+                                shape=diamond
+                            ]
+
+                            preserve_ip[
+                                label="Preserve\nClient IPs?"
+                                shape=diamond
+                            ]
+
+
+
+                        }
+
+                        subgraph cluster801_intLoadBalancers{
+                            label="Internal Load Balancers"
+                            shape="rectangle"
+                            color=brown
+
+                            inhttp[
+                                label="HTTP/S\nTraffic"
+                            ]
+
+                            intcp[
+                                label="TCP\nTraffic"
+                            ]
+
+                            inudp[
+                                label="UDP\nTraffic"
+                            ]
+
+                            intcp_lb[
+                                label="Internal TCP/UDP\nLoad Balancer"
+                                shape=rectangle
+                            ]
+
+                            inthttp_lb[
+                                label="Internal HTTP(S)\nLoad Balancer"
+                                shape=rectangle
+                            ]
+
+                        }
+                    }
+                }
+                subgraph cluster4_compute{
+                    label="Compute"
+                    color=white
+
+                    subgraph cluster40_appengine{
+                        label="App Engine"
+
+                        app_engine[
+                            label="App Engine"
+                        ]
+                    }
+
+                    cloudrun[
+                        label="Cloud Run"
+                    ]
+
+                    cloudfunc[
+                        label="Cloud Function"
+                    ]
+
+                    subgraph cluster5_gce{
+                        label="Compute Engine"
+                        color="aqua"
+
+                        compute1[
+                            label="Compute Instance1"
+                            color="white"
+                        ]
+
+                        compute2[
+                            label="Compute Instance1"
+                            color="white"
+                        ]
+
+                        subgraph cluster50_instance{
+                            label = "Instance Groups"
+                            color="white"
+
+                            subgraph cluster500_managed{
+                                label="Managed Instance Group"
+                                color="khaki"
+
+                                subgraph cluster5000_instancetemplate{
+                                    label="Instance Template"
+                                    color=white
+
+                                    managed_node1[
+                                        label="instance1"
+                                    ]
+                                    managed_node2[
+                                        label="instance2"
+                                    
+                                    ]
+                                }
+                            }
+
+                            subgraph cluster501_unmanaged{
+                                label="Unanaged Instance Group"
+                                color="khaki3"
+
+                                subgraph cluster5000_instancetemplate{
+                                    label="Instance Template"
+                                    color=white
+                                    unmanaged_node1[
+                                        label="instance1"
+                                    ]
+                                    unmanaged_node2[
+                                        label="instance2"
+                                    
+                                    ]
+                                }
+                            }                            
+
+                        }
+
+                        
+                    }
+
+                    subgraph cluster6_gke{
+                        label="GKE"
+                        color=azure1
+
+                        subgraph cluster7_node1{
+                            label="node1"
+                            color="lemonchiffon"
+
+                            subgraph cluster8_pod1{
+                                label="pod1"
+                                color=azure2
+
+                                pod1_cont1[
+                                    label="container1"
+                                    shape=rectangle
+                                ]
+
+                                pod1_cont2[
+                                    label="container2"
+                                    shape=rectangle
+                                ]
+
+                            }
+                            subgraph cluster9_pod2{
+                                label="pod2"
+                                color=azure3
+
+                                pod2_cont1[
+                                    label="container1"
+                                    shape=rectangle
+                                ]
+
+                                pod2_cont2[
+                                    label="container2"
+                                    shape=rectangle
+                                ]
+
+                            }
+                        }
+
+                        subgraph cluster7_node2{
+                            label="node2"
+                            color="lemonchiffon2"
+
+                            subgraph cluster70_pod1{
+                                label="pod1"
+                                color=azure2
+
+                                pod70_cont1[
+                                    label="container1"
+                                    shape=rectangle
+                                ]
+
+                                pod70_cont2[
+                                    label="container2"
+                                    shape=rectangle
+                                ]
+
+                            }
+                            subgraph cluster71_pod2{
+                                label="pod2"
+                                color=azure3
+
+                                pod71_cont1[
+                                    label="container1"
+                                    shape=rectangle
+                                ]
+
+                                pod71_cont2[
+                                    label="container2"
+                                    shape=rectangle
+                                ]
+
+                            }
+                        }                   
+                    }
+                }
+            }
+        }
+    }
+
+    
+
+    onprem_gateway -> gcp_gateway [label="Cloud VPC" dir="both"]
+
+    external_traffic -> {exhttp, extcp, exicmp, exudp}
+
+    exhttp -> http_lb [fontcolor=white color=white]
+    extcp -> ssl_offload [fontcolor=white color=white]
+    ssl_offload -> ssl_proxy [label="yes" fontcolor=white color=white]
+    ssl_offload -> ext_ipv6 [label="no" fontcolor=white color=white]
+    ext_ipv6 -> tcp_proxy [label="yes" fontcolor=white color=white]
+    ext_ipv6 -> preserve_ip [label="no" fontcolor=white color=white]
+    preserve_ip -> tcp_proxy [label="no" fontcolor=white color=white]
+    preserve_ip -> ext_loadbal [label="yes" fontcolor=white color=white]
+    {exicmp, exudp} -> ext_loadbal [fontcolor=white color=white]
+
+    compute1 -> {intcp inudp} -> intcp_lb [fontcolor=white color=white]
+    compute1 -> inhttp -> inthttp_lb [fontcolor=white color=white]
+
+    inthttp_lb 
+}

@@ -1,0 +1,71 @@
+
+=======================================
+code1
+    Merge Two Sorted Lists
+    Find Longest Word(s)
+    Finding Duplicates (use hashmap)
+    Calculate Factorial and Fibonacci numbers
+    Making Coin Change
+    Recursive Staircase
+    Balanced Parentheses (using stack)
+    Knapsack Problem
+=======================================
+code2
+    2sum & 3sum
+    Towers of Hanoi
+    Histogram Rectangle
+    Reverse Linked List
+    Binary Heap
+    Contiguous Array
+    Longest Consecutive Sequence
+    Max Subarray
+    Concatenate Words
+    Jumping Kangaroos
+    Tax Brakets
+=======================================
+code3
+    Connected Cells
+    Simple BFS (Breadth First Search)
+    BFS  find a place for a water well 
+    Topological sort - Kahn's Algorithm
+    Binary Search in Sorted Array
+    Find K-th largest number in the array
+    Cyclic Sort
+    Jump Game
+    Design a round buffer to keep ip addresses
+    Between Two Sets
+    Rearrange Characters to Keep Them Apart
+=======================================
+code4
+    Substring Search Algorithms: Brute Force, KMP, Z
+    Substring Search Algorithms: Rabin Karp, Boyer-Moore, Aho-Corasick
+    Thompson NFA (Non-Deterministic Finite Automata)
+    Longest Palindromic Substring
+    Longest Palindromic Substring  Using Hash of Duplicates
+    Shortest Palindrome
+    Find depth of a binary tree
+    Invert Binary Tree
+    Binary Search Tree Checker
+    Suggest Word Completion Using Trie Structure
+    Wordle Game
+    Does This Linked List Have A Cycle?
+    Find The Rotation Point In An Array
+    Single Riffle Shuffle
+=======================================
+code5
+    Tow Egg Problem
+    Second Largest Item in BST
+    Simulate a 7-Sided Die Using a 5-Sided Die
+    Implement A Queue With Two Stacks
+    The Stolen Breakfast Drone
+    Reverse a String in Place
+    Sort positive integers in linear time
+    In-Place Shuffle
+    Find Duplicate (at least one) in an array at O(1) space
+    Graph Coloring
+    MeshMessage
+=======================================
+code6
+
+=======================================
+

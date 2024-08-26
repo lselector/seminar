@@ -1,0 +1,76 @@
+digraph {
+    nodesep=0.1;
+    ranksep=0.1;
+    rankdir=TB;
+    fontname="Helvetica";
+    fontsize=10;
+
+    labelloc ="t"
+    label="Option 4 - Postgres Migration Hot Standby on GCP"
+    fontsize="12"
+
+    node [ color=red, shape=record, fontname=Helvetica,fontsize=10 ];
+    edge [ color=blue, fontname=Helvetica, fontsize=6];
+
+    master_mysql [ label="Master Postgres
+    datasource",shape=oval];
+    hot_swap [ label = "hot standby", shape=rectangle ]
+    #pg_dump [ label = "pg_dump", shape=rectangle ]
+    #aws_dms [ label="AWS Data Migration Service" ]
+    cloud_sql [ label="CloudSQL Postgres"]
+
+    subgraph cluster_aws {
+        label="AWS";
+        labeljust=l
+        color=blue;
+        style="bold";
+        width=.8
+        fontsize=10
+        ranksep=1
+        
+        subgraph cluster_rdp {
+            label="RDS";
+            color=brown;
+            height=.1;
+            master_mysql; 
+            test_sql           
+        }        
+    }
+
+    subgraph cluster_gcp {
+        label="GCP";
+        labeljust=l;
+        color=darkgreen;
+        style="bold";
+        width=.8
+        fontsize=10
+        ranksep=1
+        hot_swap
+        #subgraph cluster_ec2 {
+         #   label="k8s Pod";
+          #  labeljust=l;
+           # concentrate=true
+            #color=brown;
+            #pg_dump
+            #pg_restore
+        #}
+        #subgraph cluster_gs {
+         #   label = "gs://bucket"
+         #   color=purple;
+         #   dump_tar 
+        #}
+        subgraph cluster_cloud_sql {
+            label="CloudSQL";
+            color=purple;
+            cloud_sql
+        }
+    }
+
+    master_mysql -> hot_swap [
+      fontname=Helvetica, color=red, fontsize=8, arrowtail=vee, arrowhead=vee, ];
+    hot_swap -> cloud_sql [ label=pg_restore
+      fontname=Helvetica, color=red, fontsize=8, arrowhead=vee, ];
+    #dump_tar -> pg_restore 
+    #pg_restore-> cloud_sql [fontsize=9]
+    #pg_restore -> cloud_sql [ label="Cloud Migration" fontsize=9 ]   
+}

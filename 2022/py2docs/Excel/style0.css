@@ -1,0 +1,28 @@
+/* selectorweb Style Sheet by Lev Selector */
+
+BODY, TD, TH, P, DIV, blockquote, li, ul 
+  {FONT-FAMILY: verdana, arial, geneva, helvetica; FONT-SIZE: 10pt;}
+
+A:hover { COLOR: #FF0000; background: #FFA; TEXT-DECORATION: underline } 
+
+.sectionheader {
+  font-weight: bold;
+  font-size: 14px;
+  color: #000000;
+  padding-left: 15px;
+  padding-right: 15px;
+  background-color: #c4ecff;
+  margin: 10px;
+/*  border-top: 1px solid #084e84;
+  margin: 5px;
+  border-bottom: 1px solid #084e84;
+  background-color: #dbe3b2;
+*/
+}
+
+.style1 {
+	color: #CC0000;
+	font-weight: bold;
+}
+.code {color: #0000FF}
+.comment {color: #669900}

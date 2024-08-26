@@ -1,0 +1,95 @@
+digraph top_level {
+    rankdir=TB
+    concentrate=true
+
+    node[
+        shape=rectangle
+    ]
+
+    movement[
+        label="Movement\nEvents"
+    ]
+
+    haulage[
+        label="Haulage\nFlags"
+    ]
+
+    ddct[
+        label="DDCT"
+    ]
+
+    cass [
+        label="CASS"
+    ]
+
+    chlf [
+        label="CHLF"
+    ]
+
+    tol[
+        label="TOL"
+    ]
+
+    payables[
+        label="Carriers Report Car\nHire Payables"
+    ]
+
+    reclaims[
+        label="Reclaims"
+    ]
+
+    negotiations[
+        label="Car Hire Rate\nNegotiations"
+    ]
+
+    receivables[
+        label="Car Hire\nReceivables"
+    ]
+
+    claims[
+        label="Claims"
+    ]
+
+    er [
+        label="Event\nRepository\n(ER)"
+        shape=oval
+        style=filled
+        color=red
+        width=2
+    ]
+
+    lcs [
+        label="Liability\nContinuity\nSystem (LCS)"
+        shape=oval
+        style=filled
+        color=red
+        width=2
+    ]
+
+    chdx [
+        label="Car Hire Data\nExchange\n(CHDX)"
+        shape=oval
+        style=filled
+        color=red
+        width=2
+    ]
+
+    charm [
+        label="CHARM"
+        shape=oval
+        style=filled
+        color=red
+    ]
+
+    movement -> haulage
+
+    {rank=same movment negotiations charm}
+    {movement haulage ddct tol lcs} -> er
+    er -> {cass chlf lcs}
+    ddct -> lcs
+    lcs -> {tol payables ddct}
+    {reclaims tol charm} -> payables
+    payables -> chdx
+    negotiations -> charm
+    chdx -> {receivables claims}
+}

@@ -1,0 +1,228 @@
+digraph{
+	rankdir=TB
+	compound=true 	
+	nodesep=".75"
+	ranksep="1.2"
+
+	node[
+		shape=rectangle
+		style=filled
+		color=white
+	]
+	subgraph cluster99_blob{
+		style=filled
+		color=aqua
+		width=17
+		node[
+			shape=folder
+		]
+		label="/BLOB/ingress"
+		ingestion_CEDARAI[label="CEDARAI"]
+		ingestion_TRAIN80[label="TRAIN80"]
+		ingestion_CLM[label="CLM"]
+		ingestion_FEC[label="FEC"]
+		ingestion_GMS_BNSF[label="GMS_BNSF"]
+		ingestion_GMS_CN[label="GMS_CN"]
+		ingestion_GMS_KCS[label="GMS_KCS"]
+		ingestion_GMS_NS[label="GMS_NS"]
+		ingestion_RMI_DIRECT[label="RMI_DIRECT"]
+		ingestion_TRAIN76[label="TRAIN76"]
+		ingestion_WATCO[label="WATCO"]
+		ingestion_WATSS[label="WATSS"]
+	}
+
+	subgraph cluster1_ingestion{ 
+		style=filled
+		color=lightblue
+		labelloc=b
+		label="dafolderricks: RAW_INGESTION"
+			dafolderricks_raw_ingestion[label="RAW_INGESTION"]
+	}
+				
+	subgraph cluster02_raw_data{ 
+		label="Dafolderase: raw_data"
+		style=filled
+		color=lightcoral
+		node[shape=cylinder]
+		raw_CEDARAI[label="cedar_ai"]
+		raw_train80[label="train80"]
+		raw_CLM[label="clm"]
+		raw_FEC[label="fec"]
+		raw_GMS_BNSF[label="gms_bnsf"]
+		raw_GMS_CN[label="gms_cn"]
+		raw_GMS_KCS[label="gms_kcs"]
+		raw_GMS_NS[label="gms_ns"]
+		raw_RMI_DIRECT[label="rmi_direct"]
+		raw_TRAIN76[label="train76"]
+		raw_WATCO[label="watco"]
+		raw_WATSS[label="watss"]
+	}
+	
+	subgraph cluster21_structured{
+		style=filled
+		color=lightblue
+		label="dafolderricks: *_Structured"
+		dafolderricks_structured_CEDARAI[label="CEDARAI_Structured"]
+		dafolderricks_structured_TRAIN80[label="TRAIN80"]
+		dafolderricks_structured_CLM[label="CLM_Structured"]
+		dafolderricks_structured_FEC[label="FEC_Structured"]
+		dafolderricks_structured_GMS_BNSF[label="GMS_BNSF_Structured"]
+		dafolderricks_structured_GMS_CN[label="GMS_CN_Structured"]
+		dafolderricks_structured_GMS_KCS[label="GMS_KCS_Structured"]
+		dafolderricks_structured_GMS_NS[label="GMS_NS_Structured"]
+		dafolderricks_structured_RMI_DIRECT[label="RMI_DIRECT_Structured"]
+		dafolderricks_structured_TRAIN76[label="TRAIN76_Structured"]
+		dafolderricks_structured_WATCO[label="WATCO_Structured"]
+		dafolderricks_structured_WATSS[label="WATSS_Structured"]
+	}
+
+subgraph cluster2{ 
+
+	label="Dafolderase: structured"
+	style=filled
+	color=lightcoral
+	node[shape=cylinder]
+	structured_CEDARAI[label="cedar_ai"]
+	structured_TRAIN80[label="train80"]
+	structured_CLM[label="clm"]
+	structured_FEC[label="fec"]
+	structured_GMS_BNSF[label="gms_bnsf"]
+	structured_GMS_CN[label="gms_cn"]
+	structured_GMS_KCS[label="gms_kcs"]
+	structured_GMS_NS[label="gms_ns"]
+	structured_RMI_DIRECT[label="rmi_direct"]
+	structured_TRAIN76[label="train76"]
+	structured_WATCO[label="watco"]
+	structured_WATSS[label="watss"]
+
+}
+
+subgraph cluster5{ 
+	style=filled
+	color=aqua
+	node[
+		shape=folder
+	]
+	label="/BLOB/egress"
+	dafolderricks_egress_CEDARAI[label="CEDARAI"]
+	dafolderricks_egress_CEDARAI_waybills[label="CEDARAI/Waybills"]
+	dafolderricks_egress_TRAIN80[label="TRAIN80"]
+
+}
+
+
+subgraph cluster3{ 
+	style=filled
+	color=lightblue
+	label="dafolderricks: *_Curated"
+	dafolderricks_curated_CEDARAI[label="CEDARAI_Curated"]
+	dafolderricks_curated_TRAIN80[label="TRAIN80_Curated"]
+	dafolderricks_curated_CLM[label="CLM_Curated"]
+	dafolderricks_curated_FEC[label="FEC_Curated"]
+	dafolderricks_curated_GMS_BNSF[label="GMS_BNSF_Curated"]
+	dafolderricks_curated_GMS_CN[label="GMS_CN_Curated"]
+	dafolderricks_curated_GMS_KCS[label="GMS_KCS_Curated"]
+	dafolderricks_curated_GMS_NS[label="GMS_NS_Curated"]
+	dafolderricks_curated_RMI_DIRECT[label="RMI_DIRECT_Curated"]
+	dafolderricks_curated_TRAIN76[label="TRAIN76_Curated"]
+	dafolderricks_curated_WATCO[label="WATCO_Curated"]
+	dafolderricks_curated_WATSS[label="WATSS"]
+}
+
+subgraph cluster4{ 
+	style=filled
+	color=lightcoral
+	label="Dafolderase: curated"
+	node[shape=cylinder]
+	curated_CEDARAI[label="cedarai"]
+	curated_TRAIN80[label="train80"]
+	curated_CLM[label="clm"]
+	curated_FEC[label="fec"]
+	curated_GMS_BNSF[label="gms_bnsf"]
+	curated_GMS_CN[label="gms_cn"]
+	curated_GMS_KCS[label="gms_kcs"]
+	curated_GMS_NS[label="gms_ns"]
+	curated_RMI_DIRECT[label="rmi_direct"]
+	curated_TRAIN76[label="train76"]
+	curated_WATCO[label="watco"]
+	curated_WATSS[label="watss"]
+}
+
+subgraph cluster6{
+	label="dafolderricks: Curated_to_AggStructured"
+	style=filled
+	color=lightblue
+	movement_curated[
+		label="MovementCurated_to_AggStructured"
+	]
+
+}
+
+subgraph cluster8_egress{
+	label="dafolderricks: *_Outbound"
+	style=filled
+	color=lightblue
+	egress_train80[
+		label="TRAIN80_Outbound"
+	]
+
+	egress_cedarai_gms[
+		label="CEDAR_AI_GMS_Outbound"
+	]
+
+	egress_cedarai_waybills[
+		label="WAYBILLS_CEDARAI_Outbound"
+	]
+}
+
+	subgraph cluster7{
+		label="Dafolderase: agg_structured"
+		style=filled
+		color=lightcoral
+		node[
+			shape=cylinder
+		]
+		curated_movement[label="movement"]
+	}
+// subgraph cluster6{
+// 	label="structured.movement"
+// 	structure_movement[
+// 		shape=cylinder
+// 		label="curated.movement"
+// 	]
+// }
+
+{
+	ingestion_CEDARAI, ingestion_TRAIN80, ingestion_CLM, ingestion_FEC, ingestion_GMS_BNSF, ingestion_GMS_CN,
+	ingestion_GMS_KCS, ingestion_GMS_NS, ingestion_RMI_DIRECT, ingestion_TRAIN76, ingestion_WATCO, ingestion_WATSS
+} -> dafolderricks_raw_ingestion [headport=n]
+
+dafolderricks_raw_ingestion -> 
+{
+	raw_CEDARAI, raw_train80, raw_CLM, raw_FEC, raw_GMS_BNSF, raw_GMS_CN, raw_GMS_KCS, raw_GMS_NS,
+	raw_RMI_DIRECT, raw_TRAIN76, raw_WATCO, raw_WATSS
+} [tailport=s]
+
+
+raw_CEDARAI -> dafolderricks_structured_CEDARAI -> structured_CEDARAI -> dafolderricks_curated_CEDARAI -> curated_CEDARAI
+curated_CEDARAI -> {egress_cedarai_gms,egress_cedarai_waybills} [tailport=s]
+egress_cedarai_gms -> dafolderricks_egress_CEDARAI [style=dashed weight=2]
+egress_cedarai_waybills -> dafolderricks_egress_CEDARAI_waybills [style=dashed weight=2] 
+raw_CLM -> dafolderricks_structured_CLM->structured_CLM->dafolderricks_curated_CLM->curated_CLM
+raw_FEC-> dafolderricks_structured_FEC->structured_FEC->dafolderricks_curated_FEC->curated_FEC
+raw_GMS_BNSF -> dafolderricks_structured_GMS_BNSF->structured_GMS_BNSF->dafolderricks_curated_GMS_BNSF->curated_GMS_BNSF
+raw_GMS_CN -> dafolderricks_structured_GMS_CN->structured_GMS_CN->dafolderricks_curated_GMS_CN->curated_GMS_CN
+raw_GMS_KCS -> dafolderricks_structured_GMS_KCS->structured_GMS_KCS->dafolderricks_curated_GMS_KCS->curated_GMS_KCS
+raw_GMS_NS -> dafolderricks_structured_GMS_NS->structured_GMS_NS->dafolderricks_curated_GMS_NS->curated_GMS_NS
+raw_RMI_DIRECT -> dafolderricks_structured_RMI_DIRECT->structured_RMI_DIRECT->dafolderricks_curated_RMI_DIRECT->curated_RMI_DIRECT
+raw_TRAIN76 -> dafolderricks_structured_TRAIN76->structured_TRAIN76->dafolderricks_curated_TRAIN76->curated_TRAIN76
+raw_train80 -> dafolderricks_structured_TRAIN80->structured_TRAIN80->dafolderricks_curated_TRAIN80->curated_TRAIN80
+raw_WATCO -> dafolderricks_structured_WATCO -> structured_WATCO -> dafolderricks_curated_WATCO -> curated_WATCO 
+raw_WATSS -> dafolderricks_structured_WATSS -> structured_WATSS -> dafolderricks_curated_WATSS -> curated_WATSS 
+curated_TRAIN80 -> egress_train80 
+
+egress_train80 -> dafolderricks_egress_TRAIN80 [style=dashed weight=2]
+{curated_CEDARAI, curated_CLM, curated_FEC, curated_GMS_BNSF, curated_GMS_CN, curated_WATCO, curated_WATSS,
+curated_GMS_KCS, curated_GMS_NS, curated_RMI_DIRECT, curated_TRAIN76, curated_TRAIN80} -> movement_curated [headport=n]
+movement_curated -> curated_movement [weight=4]
+}

@@ -1,0 +1,104 @@
+digraph top_level {
+    rankdir=TB
+
+    node [
+       shape=rectangle
+    ]
+
+    identify_cars[
+        label="Identify Cars"
+    ]
+
+    make_offer[
+        label="Make Offer"
+    ]
+
+
+    
+    rate_concurrence[
+        shape=diamond
+        height=1.2
+        width= 2
+        label="Rate\nConcurrence"
+        style=filled
+        color=blue
+        fontcolor=white
+    ]
+
+
+
+    bfo[
+        height=1.2
+        // width= 2
+        label="Counter or\nRequest BFO"
+        // style=filled
+        // color=blue
+        // fontcolor=white
+    ]
+
+    arbitration[
+        shape=diamond
+        height=1.2
+        width= 2
+        label="Counter,\nArbitration,\nor End"
+        style=filled
+        color=blue
+        fontcolor=white
+    ]
+
+    deal[
+        style=filled
+        color=green
+        fontcolor=white
+        label="Deal Agreement"
+    ]
+
+    dead_deal[
+        style=filled
+        color=darkred
+        fontcolor=white
+        label="Deal Dead"
+    ] 
+    
+    rate_concurrence[
+        shape=diamond
+        height=1.2
+        width= 2
+        label="Rate\nConcurrence"
+        style=filled
+        color=blue
+        fontcolor=white
+    ]
+
+    eval_offer[
+        label="Evaluate\nCounter"
+    ]
+    
+    counter_accept[
+        shape=diamond
+        height=1.2
+        width= 2
+        label="Counter\nAcceptable"
+        style=filled
+        color=blue
+        fontcolor=white
+    ]
+
+    rule_25[
+        label="Rule 25"
+    ]
+
+    identify_cars -> make_offer 
+    make_offer -> rate_concurrence 
+    rate_concurrence -> deal [label="Yes" tailport="s"]
+    rate_concurrence -> eval_offer[label="No" tailport="s"]
+    eval_offer -> counter_accept [headport="n"]
+    counter_accept->deal [label="Yes" tailport="s"]
+    counter_accept->bfo [label="No" tailport="s"]
+    bfo -> eval_offer [label="Counter"]
+    bfo -> arbitration [label="BFO" headport="w" labeldistance=2]
+    arbitration -> eval_offer [label="Counter" tailport="n"] 
+    arbitration -> dead_deal [label="END"]
+    arbitration -> rule_25 [label="Arbitration" tailport="s"]
+    rule_25 -> deal
+}

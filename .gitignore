@@ -1,0 +1,12 @@
+**/.ipynb_checkpoints
+**/junk*.*
+**/.DS_Store
+**/__pycache__/
+**/*.py[cod]
+**/Thumbs.db
+**/OLD
+**/SKIP
+**/~*
+**/.Rapp.history
+*_pdf.txt
+*_ppt.txt
