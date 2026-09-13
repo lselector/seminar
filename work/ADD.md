@@ -186,15 +186,17 @@ The grammar is seven rules:
    heading of the contents slide.
 2. `## slide: <title>` starts a section with that title.
 3. `### <headline>` starts a news item inside the current
-   section.
+   section. A bare `###` starts one with no heading, for a
+   block that is only bullets.
 4. An image line directly under a `###` is that item's
    picture, optionally followed by a manifest comment.
 5. `-` bullets are body lines. A bullet holding only a URL
    renders as a small blue clickable link.
-6. `<!-- locked -->`, `<!-- notoc -->` and
-   `<!-- profile -->` mark what a human has claimed, what
-   stays off the contents, and which slide is the author
-   page. Deletion moves an item to a sidecar file. See
+6. `<!-- locked -->`, `<!-- notoc -->`, `<!-- profile -->`
+   and `<!-- closing -->` mark what a human has claimed,
+   what stays off the contents, and which two slides have
+   their own shape. Deletion moves an item to a sidecar
+   file. See
    [Protecting what a human wrote](#protecting-what-a-human-wrote).
 
 Note what rule 2 does **not** say. A section is not a
@@ -405,9 +407,23 @@ Typography, also measured from the existing decks:
 | Element | Font | Size | Weight |
 |---|---|---|---|
 | Slide title | Calibri | 20 pt | bold |
-| Item headline | Calibri | size + 1 | bold |
-| Body bullet | Calibri | 12 to 8 pt | normal |
+| Item headline | Calibri | size + 1 | bold, red |
+| Body bullet | Calibri | 12 pt, down to 8 | normal |
+| Code run | Consolas | 9 pt | normal, blue |
+| Red emphasis | Calibri | body size | bold, red |
 | Link line | Calibri | 9 pt | normal, blue |
+
+News slides use 12 pt and step down only when text will not
+fit. The two pages that hold a single short block, the
+author page and the sign-off, may go above it; nothing else
+may.
+
+Code is marked with backticks and set in Consolas, which
+ships with Microsoft Office. The hand-made decks used
+Victor Mono at the same 9 pt and the same blue, but that is
+a Google Slides web font: it is not installed locally, so
+PowerPoint would substitute something proportional and the
+alignment that makes code readable would be lost.
 
 Every content box carries the pale yellow fill `FFF2CC` and
 a 0.75 pt red border `FF0000`, both lifted from the
@@ -447,13 +463,22 @@ columns, 25 models each, written as `marker score name`
 with the marker coloured by vendor and a legend across the
 top.
 
+The page runs at 9 pt rather than the deck's 12, because it
+carries 50 lines of data and nothing else. The two columns
+sit together in the middle of the slide, each sized to its
+own longest line and its own row count, so neither the
+width nor the height carries slack.
+
 The page also states what the numbers are current to.
 Arena publishes a `voteCutoffISOString` beside the
 entries, and that, not the day we downloaded the file, is
 what the board reflects: on Sept 12 the boards were still
 counted through Sept 11. `leaderboard.py` stores it per
 board, so if the two ever diverge the page says so instead
-of printing one date over both.
+of printing one date over both. It reads at the normal 12 pt
+in an ordinary yellow box on the header row beside the
+legend, which is also what keeps the columns clear of it:
+they start below the whole header, not beside it.
 
 Parsed data beats a screenshot here for three reasons worth
 the extra code. The text stays crisp at any projector
@@ -754,14 +779,27 @@ Three simplifications, each with the measurement that would
 change the decision.
 
 **Almost every slide has the same shape.** One to three
-items, text left, picture right. The one exception is the
-author page, which carries a `profile` flag and gets the
-mirrored shape from the older decks: a large portrait on
-the left, details beside it, the name set larger. This is
-the scaling gate below being spent once, deliberately: the
-deck file names a *kind* of slide and `deck_layout` owns
-what that kind looks like, so there are still no
-coordinates anywhere in the Markdown. The hand-made collages in the
+items, text left, picture right. Three pages differ, and
+each says so with a flag. `profile` on the author page puts a
+large portrait beside its details and centres the pair on
+the slide. `closing` on the sign-off page gives a 40 pt
+title centred a third of the way down with the links
+centred beneath. Neither draws a box: a page holding one
+thing does not need a frame around it to say so. `promo`
+on the channel page keeps its yellow box but sets the text
+at 22 pt with no bullet dots, beside a wider screenshot.
+
+Each of the three is a standing page that appears in every
+deck, which is what earns them the exception: the cost is
+paid once and recovered every week.
+
+This is the scaling gate below being spent, deliberately
+and twice. The rule it follows is the one written there:
+the deck file names a *kind* of slide and `deck_layout`
+owns what that kind looks like, so there are still no
+coordinates anywhere in the Markdown. A third exception
+would be a signal that the shape is wrong, not that the
+grammar needs another word. The hand-made collages in the
 older decks are more varied and sometimes more striking.
 This is the deliberate trade for never positioning anything
 again. Gate: if a recurring kind of slide genuinely needs a

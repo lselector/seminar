@@ -17,8 +17,8 @@ grows large in the first place.
 Each picture is scaled to fit the largest box the layout
 can ever give it, at a chosen resolution:
 
-    box    3.60 x 5.07 inches, from deck_layout
-    at 150 ppi that is 540 x 760 pixels
+    box    5.10 x 5.07 inches, from deck_layout
+    at 150 ppi that is 765 x 760 pixels
 
 Storing more pixels than that is wasted bytes: the slide
 cannot show them. Aspect ratio is preserved and pictures
@@ -66,6 +66,9 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import deck_layout as L
+from deck_parser import DeckError, parse_deck_file
+
+DECK_GLOB = "*-AI-News.md"
 
 RAW_DIR = "images_raw"
 OUT_DIR = "images"
@@ -93,21 +96,29 @@ class Settings:
     quality: int = DEFAULT_QUALITY
 
     # --------------------------------------
-    def box(self):
-        """Pixel box a picture must fit inside."""
-        return (int(L.IMG_W * self.ppi),
+    def box(self, width_in=None):
+        """Pixel box one picture must fit inside."""
+        wide = width_in if width_in else L.MAX_IMG_W
+        return (int(wide * self.ppi),
                 int(L.BAND_H * self.ppi))
 
     # --------------------------------------
-    def geometry(self):
+    def geometry(self, width_in=None):
         """ImageMagick resize argument for that box."""
-        width, height = self.box()
+        width, height = self.box(width_in)
         return f"{width}x{height}>"
 
     # --------------------------------------
-    def stamp(self):
-        """Marker recording the settings used."""
-        return f"seminar-{self.ppi}ppi-q{self.quality}"
+    def stamp(self, width_in=None):
+        """Marker recording the settings used.
+
+        The box is part of it, so moving a picture to a
+        wider slot rebuilds it without --force.
+        """
+        width, height = self.box(width_in)
+        return (
+            f"seminar-{width}x{height}-q{self.quality}"
+        )
 
 
 # --------------------------------------------------------------
@@ -171,11 +182,12 @@ def read_comment(path):
 
 
 # --------------------------------------------------------------
-def needs_processing(raw_path, out_path, force, settings):
+def needs_processing(raw_path, out_path, force,
+                     settings, wide):
     """Decide whether one picture must be rebuilt."""
     if force or not os.path.isfile(out_path):
         return True
-    if read_comment(out_path) != settings.stamp():
+    if read_comment(out_path) != settings.stamp(wide):
         log_message(
             f"Rebuilding {out_path} - different settings"
         )
@@ -187,7 +199,7 @@ def needs_processing(raw_path, out_path, force, settings):
 
 
 # --------------------------------------------------------------
-def build_convert_cmd(src, dst, settings):
+def build_convert_cmd(src, dst, settings, wide):
     """Build the ImageMagick command for one picture."""
     return [
         MAGICK, f"{src}[0]",
@@ -196,9 +208,9 @@ def build_convert_cmd(src, dst, settings):
         '-alpha', 'remove', '-alpha', 'off',
         '-colorspace', 'sRGB',
         '-fuzz', TRIM_FUZZ, '-trim', '+repage',
-        '-resize', settings.geometry(),
+        '-resize', settings.geometry(wide),
         '-strip',
-        '-set', 'comment', settings.stamp(),
+        '-set', 'comment', settings.stamp(wide),
         '-density', str(settings.ppi),
         '-units', 'PixelsPerInch',
         '-quality', str(settings.quality),
@@ -209,12 +221,12 @@ def build_convert_cmd(src, dst, settings):
 
 
 # --------------------------------------------------------------
-def run_convert(src, dst, settings):
+def run_convert(src, dst, settings, wide):
     """Run ImageMagick, returning True on success."""
     try:
         with open(CONVERT_LOG, 'a') as log_file:
             subprocess.run(
-                build_convert_cmd(src, dst, settings),
+                build_convert_cmd(src, dst, settings, wide),
                 stdout=log_file, stderr=log_file, check=True
             )
         return True
@@ -224,14 +236,14 @@ def run_convert(src, dst, settings):
 
 
 # --------------------------------------------------------------
-def normalize_image(raw_path, out_path, settings):
+def normalize_image(raw_path, out_path, settings, wide):
     """Write one normalized copy, atomically."""
     temp_path = f"{out_path}.tmp.jpg"
     log_message(
         f"Cleaning {os.path.basename(raw_path)} -> "
         f"{os.path.basename(out_path)}"
     )
-    if not run_convert(raw_path, temp_path, settings):
+    if not run_convert(raw_path, temp_path, settings, wide):
         if os.path.exists(temp_path):
             os.remove(temp_path)
         return False
@@ -240,17 +252,23 @@ def normalize_image(raw_path, out_path, settings):
 
 
 # --------------------------------------------------------------
-def process_all(raw_files, force, settings):
+def process_all(raw_files, force, settings, widths):
     """Normalize every raw picture, counting outcomes."""
     done = skipped = errors = 0
     for raw_path in raw_files:
         out_path = output_path(raw_path)
+        stem = os.path.splitext(
+            os.path.basename(raw_path)
+        )[0]
+        wide = widths.get(stem, L.MAX_IMG_W)
         if not needs_processing(
-            raw_path, out_path, force, settings
+            raw_path, out_path, force, settings, wide
         ):
             skipped += 1
             continue
-        if normalize_image(raw_path, out_path, settings):
+        if normalize_image(
+            raw_path, out_path, settings, wide
+        ):
             done += 1
         else:
             errors += 1
@@ -323,7 +341,7 @@ def print_summary(counts, orphans, settings):
     log_message("=" * 50)
     log_message("Image cleaning completed")
     log_message(
-        f"Standard: JPEG q{settings.quality}, fits "
+        f"Standard: JPEG q{settings.quality}, at most "
         f"{width}x{height} px at {settings.ppi} ppi"
     )
     log_message(f"Cleaned: {done}")
@@ -394,6 +412,32 @@ def collect_targets(argv):
 
 
 # --------------------------------------------------------------
+def read_widths(argv):
+    """Learn each picture's widest box from the deck.
+
+    Falls back to the widest box any layout uses, which is
+    safe but stores more pixels than most slots can show.
+    """
+    named = [
+        a for a in argv[1:]
+        if a.endswith(".md") and os.path.isfile(a)
+    ]
+    source = named[0] if named else None
+    if source is None:
+        found = sorted(glob.glob(DECK_GLOB))
+        source = found[-1] if found else None
+    if source is None:
+        return {}
+    try:
+        deck = parse_deck_file(source)
+    except DeckError as exc:
+        log_message(f"WARNING: cannot read {source}: {exc}")
+        return {}
+    log_message(f"Sizing pictures against {source}")
+    return L.image_widths(deck.sections)
+
+
+# --------------------------------------------------------------
 def main():
     """Normalize every picture from raw into images."""
     log_message("Starting image cleaning")
@@ -412,7 +456,8 @@ def main():
     init_conversion_log()
     report_collisions(raw_files)
 
-    counts = process_all(raw_files, force, settings)
+    widths = read_widths(sys.argv)
+    counts = process_all(raw_files, force, settings, widths)
     orphans = report_orphans(find_raw_files(RAW_DIR))
     print_summary(counts, orphans, settings)
 

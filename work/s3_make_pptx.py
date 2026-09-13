@@ -61,14 +61,14 @@ from bench_page import render_benchmarks_page
 from pptx_text import (
     BOX_PAD, COLOR_BORDER, BORDER_WIDTH, COLOR_LINK,
     COLOR_TEXT, FONT, add_link_para, add_rich_para,
-    add_headline_para, add_textbox, first_or_new,
+    add_headline_para, add_textbox, center, first_or_new,
     set_bullet, style_run,
 )
 from deck_parser import (
     DeckError, KIND_BENCHMARKS, KIND_TOC, all_headlines,
     deleted_count, deleted_sidecar_path, is_link,
     live_blocks, live_sections, parse_deck_file,
-    read_deleted_topics, recreated_topics,
+    read_deleted_topics, recreated_topics, split_markup,
 )
 
 LEADERBOARD_JSON = "resources_raw/leaderboard.json"
@@ -129,14 +129,18 @@ def add_slide(prs):
 
 
 # --------------------------------------------------------------
-def render_block_text(slide, item):
+def render_block_text(slide, item, boxed=True):
     """Draw the headline and bullets of one news block."""
-    frame = add_textbox(slide, item.text, boxed=True, fit=True)
-    add_headline_para(
-        frame, item.block.headline,
-        L.headline_size(item.block, item.size), 0
+    frame = add_textbox(
+        slide, item.text, boxed=boxed, fit=True
     )
-    used = 1
+    used = 0
+    if item.block.headline:
+        add_headline_para(
+            frame, item.block.headline,
+            L.headline_size(item.block, item.size), used
+        )
+        used = 1
     for text in item.block.bullets:
         if is_link(text):
             add_link_para(
@@ -145,9 +149,10 @@ def render_block_text(slide, item):
             )
         else:
             para = add_rich_para(
-                frame, text, item.size, used
+                frame, split_markup(text), item.size, used
             )
-            set_bullet(para, item.size)
+            if not L.is_promo(item.block):
+                set_bullet(para, item.size)
         used += 1
 
 
@@ -204,20 +209,38 @@ def render_title(slide, text, width=None):
         return
     rect = L.Rect(
         L.MARGIN, L.TITLE_Y,
-        width if width else L.CONTENT_W, L.TITLE_H
+        L.title_width(text, width), L.TITLE_H
     )
-    frame = add_textbox(slide, rect)
+    frame = add_textbox(slide, rect, wrap=False)
     run = frame.paragraphs[0].add_run()
     run.text = text
     style_run(run, L.TITLE_SIZE, bold=True)
 
 
 # --------------------------------------------------------------
+def render_closing_title(slide, text):
+    """Draw the big centred title of the sign-off page."""
+    if not text:
+        return
+    frame = add_textbox(slide, L.closing_title_rect())
+    para = frame.paragraphs[0]
+    center(para)
+    run = para.add_run()
+    run.text = text
+    style_run(run, L.CLOSING_TITLE_SIZE, bold=True)
+
+
+# --------------------------------------------------------------
 def render_content_page(slide, page):
     """Draw a title plus every placed news block."""
-    render_title(slide, page.title)
+    if page.closing:
+        render_closing_title(slide, page.title)
+    else:
+        render_title(slide, page.title)
     for item in page.items:
-        render_block_text(slide, item)
+        render_block_text(
+            slide, item, boxed=not page.plain
+        )
         render_block_image(slide, item)
 
 

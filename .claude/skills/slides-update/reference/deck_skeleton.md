@@ -26,17 +26,19 @@
      paginates this section by itself. -->
 
 ## slide: Weekly videos every Friday
+<!-- promo -->
 <!-- locked -->
 <!-- notoc -->
 
-### Subscribe to the channel
+###
 ![](images/youtube-channel.jpg)
 <!-- shot: https://www.youtube.com/@lev-selector -->
 - Weekly videos every Friday
+- 7.46K subscribers, 333 videos
 - 1. Subscribe to this channel
 - https://www.youtube.com/@lev-selector
-- 2. Download slides from GitHub using the links under the videos
-- 3. Please pause the video and answer the pinned question in the comments
+- 2. Download slides from GitHub using links under the videos
+- !!3. Please pause the video - and answer the pinned question in comments under the video!!
 
 ## slide: AI News
 
@@ -71,10 +73,11 @@
 - https://eais.ai
 
 ## slide: Thank You!
+<!-- closing -->
 <!-- locked -->
 <!-- notoc -->
 
-### Questions and discussion
+###
 - Videos of every seminar are on YouTube
 - https://www.youtube.com/@lev-selector
 - Slides on GitHub. Click a pptx file, then the download button on the right

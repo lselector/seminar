@@ -23,10 +23,8 @@ Created: 2026-09-12
 Last updated: 2026-09-12
 """
 
-import re
-
 from pptx.dml.color import RGBColor
-from pptx.enum.text import MSO_AUTO_SIZE
+from pptx.enum.text import MSO_AUTO_SIZE, PP_ALIGN
 from pptx.oxml.ns import qn
 from pptx.util import Emu, Inches, Pt
 
@@ -55,7 +53,23 @@ BULLET_INSET = BULLET_MAR_L / 914400.0
 # Left and right text margin inside every box.
 LEFT_MARGIN_EMU = 45720
 
-RE_MARKUP = re.compile(r"(\*\*.+?\*\*|==.+?==)")
+# Code runs. Consolas ships with Microsoft Office, so it is
+# on any machine that opens these decks. The hand-made
+# decks used Victor Mono, a Google Slides web font that is
+# not installed locally and would be substituted with
+# something proportional, defeating the point.
+CODE_FONT = "Consolas"
+CODE_SIZE = 9
+COLOR_CODE = RGBColor(0x3C, 0x78, 0xD8)
+
+# The headline of every content box, as in the older decks.
+COLOR_HEADLINE = RGBColor(0xFF, 0x00, 0x00)
+
+# Must match deck_parser's names. Pinned by a test.
+STYLE_BOLD = "bold"
+STYLE_HILITE = "hilite"
+STYLE_CODE = "code"
+STYLE_RED = "red"
 
 
 # --------------------------------------------------------------
@@ -69,19 +83,22 @@ def style_box(shape):
 
 
 # --------------------------------------------------------------
-def add_textbox(slide, rect, boxed=False, fit=False):
-    """Add a word-wrapping text box at a Rect.
+def add_textbox(slide, rect, boxed=False, fit=False,
+                wrap=True):
+    """Add a text box at a Rect.
 
     boxed paints the fill and border. fit asks PowerPoint
     to settle the height against the real text, which
-    corrects any small error in our own estimate.
+    corrects any small error in our own estimate. wrap=False
+    keeps a one-line label on one line even if the box is
+    measured slightly too narrow.
     """
     shape = slide.shapes.add_textbox(
         Inches(rect.x), Inches(rect.y),
         Inches(rect.w), Inches(rect.h)
     )
     frame = shape.text_frame
-    frame.word_wrap = True
+    frame.word_wrap = wrap
     frame.margin_left = Emu(LEFT_MARGIN_EMU)
     frame.margin_right = Emu(LEFT_MARGIN_EMU)
     frame.margin_top = Emu(18288)
@@ -103,19 +120,9 @@ def style_run(run, size, bold=False, color=COLOR_TEXT):
 
 
 # --------------------------------------------------------------
-def split_markup(text):
-    """Split a bullet into (text, bold, hilite) pieces."""
-    pieces = []
-    for part in RE_MARKUP.split(text):
-        if not part:
-            continue
-        if part.startswith("**") and part.endswith("**"):
-            pieces.append((part[2:-2], True, False))
-        elif part.startswith("==") and part.endswith("=="):
-            pieces.append((part[2:-2], False, True))
-        else:
-            pieces.append((part, False, False))
-    return pieces
+def center(para):
+    """Centre a paragraph inside its box."""
+    para.alignment = PP_ALIGN.CENTER
 
 
 # --------------------------------------------------------------
@@ -186,23 +193,41 @@ def set_highlight(run, rgb):
 
 
 # --------------------------------------------------------------
-def add_rich_para(frame, text, size, used):
-    """Add a paragraph with bold and highlight markup."""
+def add_code_run(para, text):
+    """Add one fixed-width, blue run of code."""
+    run = para.add_run()
+    run.text = text
+    style_run(run, CODE_SIZE, color=COLOR_CODE)
+    run.font.name = CODE_FONT
+    return run
+
+
+# --------------------------------------------------------------
+def add_rich_para(frame, pieces, size, used):
+    """Add a paragraph from (text, style) pieces."""
     para = first_or_new(frame, used)
-    for piece, bold, hilite in split_markup(text):
+    for piece, style in pieces:
+        if style == STYLE_CODE:
+            add_code_run(para, piece)
+            continue
         run = para.add_run()
         run.text = piece
-        style_run(run, size, bold=bold)
-        if hilite:
+        if style == STYLE_RED:
+            style_run(
+                run, size, bold=True, color=COLOR_HEADLINE
+            )
+            continue
+        style_run(run, size, bold=style == STYLE_BOLD)
+        if style == STYLE_HILITE:
             set_highlight(run, COLOR_HILITE)
     return para
 
 
 # --------------------------------------------------------------
 def add_headline_para(frame, text, size, used):
-    """Add the bold headline paragraph of a block."""
+    """Add the bold red headline paragraph of a block."""
     para = first_or_new(frame, used)
     run = para.add_run()
     run.text = text
-    style_run(run, size, bold=True)
+    style_run(run, size, bold=True, color=COLOR_HEADLINE)
     return para

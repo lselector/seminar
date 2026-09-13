@@ -192,3 +192,68 @@ Slides on GDrive: https://drive.google.com/drive/folder...
 
 Slides on GitHub - https://github.com/lselector/seminar
     (click on pptx file, then on "raw" or download button on the right)
+
+-----------------------------
+
+The very last page - Thank you! page:
+
+Change the font size to 40 
+for the "Thank Your!" title text box 
+and move this text box to the
+center horizontally and then one third of the page down
+
+Put the text box with links also at the center horizontally under the title, and remove te border and the 
+filling color.
+
+-----------------------------
+
+On the last page plese remove the "Questions and discussion" subtitle - it is not needed.
+
+-----------------------------
+
+Please also make rearrangements in the "About the Speaker" page.
+
+See the attached photo.
+
+Put photo and text more in center both vertically and horizontally. Remove text box line and fill.
+
+-----------------------------
+
+On regular slides we have a title
+on the top left. The text box for it currently takes all the width of the slide. Please adjust its width - remove the unnecessary width on the right. Do it on all regular slides.
+
+-----------------------------
+
+Currently regular slides contain text in text boxes with yellow background.
+
+The font should be Calibri 12
+The title of each box should be bold and red
+
+If the textbox contains code,
+it should be fixed width font with size 9 and color blue
+
+-----------------------------
+
+Please make adjustments to page 2 "Benchmarks"
+The font size for text boxes on
+this page should be smaller than usual - 9 pts
+
+Also currently the two tables are snugged to the sides. Please put them closer to eahc other in the center of the page horizontally.
+
+Also the text giving the date ("Votes counted through Sept 11, 2026")
+should be in a regular yellow textbox with regular font size 12 and should not be hidden by other textboxes.
+
+-----------------------------
+
+On most pages we have two or one yellow text boxes on the left. Please distribute them vertically so that there will be some white space aronud them and from the top title
+
+-----------------------------
+
+Please change page "Weekly Videos Every Friday" to look more like the attached file. Make font bigger (22 text, 18 link)
+
+
+-----------------------------
+
+
+
+-----------------------------
