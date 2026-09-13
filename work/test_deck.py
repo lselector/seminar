@@ -550,6 +550,80 @@ def test_quote_inside_a_section_is_not_the_epigraph():
 
 
 # --------------------------------------------------------------
+def test_bare_heading_makes_a_headless_block():
+    """A "###" on its own is a block of only bullets."""
+    deck = parse_deck(
+        "# T\n## slide: X\n###\n- one\n- two\n"
+    )
+    block = deck.sections[0].blocks[0]
+    assert block.headline == ""
+    assert block.bullets == ["one", "two"]
+
+
+# --------------------------------------------------------------
+def test_headless_block_adds_no_contents_entry():
+    """An absent headline leaves the contents alone."""
+    deck = parse_deck(
+        "# T\n## slide: X\n### Real one\n- a\n"
+        "###\n- b\n"
+    )
+    assert all_headlines(deck) == ["Real one"]
+
+
+# --------------------------------------------------------------
+def test_headless_block_is_not_a_deleted_topic():
+    """An empty headline matches nothing in the sidecar."""
+    from deck_parser import recreated_topics
+    deck = parse_deck("# T\n## slide: X\n###\n- a\n")
+    assert recreated_topics(deck, ["Some topic"]) == []
+
+
+# --------------------------------------------------------------
+def test_markup_splits_into_styled_pieces():
+    """Bold, highlight and code each get their own run."""
+    from deck_parser import split_markup
+    pieces = split_markup(
+        "Run `pip install x` with **care** and ==note=="
+    )
+    assert pieces == [
+        ("Run ", "plain"),
+        ("pip install x", "code"),
+        (" with ", "plain"),
+        ("care", "bold"),
+        (" and ", "plain"),
+        ("note", "hilite"),
+    ]
+
+
+# --------------------------------------------------------------
+def test_strip_markup_leaves_only_words():
+    """Measuring must not count the markup characters."""
+    from deck_parser import strip_markup
+    assert strip_markup("a **b** `c` ==d==") == "a b c d"
+    assert strip_markup("plain text") == "plain text"
+
+
+# --------------------------------------------------------------
+def test_markup_styles_agree():
+    """deck_parser and pptx_text share one vocabulary."""
+    import deck_parser as P
+    import pptx_text as T
+    assert P.STYLE_BOLD == T.STYLE_BOLD
+    assert P.STYLE_HILITE == T.STYLE_HILITE
+    assert P.STYLE_CODE == T.STYLE_CODE
+
+
+# --------------------------------------------------------------
+def test_red_markup_is_its_own_style():
+    """!!text!! marks a line for bold red."""
+    from deck_parser import split_markup, strip_markup
+    assert split_markup("a !!loud!! b") == [
+        ("a ", "plain"), ("loud", "red"), (" b", "plain")
+    ]
+    assert strip_markup("a !!loud!! b") == "a loud b"
+
+
+# --------------------------------------------------------------
 def test_link_detection():
     """Only bare URLs count as link bullets."""
     assert is_link("https://example.com")

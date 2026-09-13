@@ -14,6 +14,7 @@ The grammar it accepts (see ADD.md):
     ## slide: benchmarks           generated LM Arena
     ## slide: AI News              a content section
     ### Headline of one item       a news block
+    ###                            a block with no heading
     ![](images/foo.jpg)            that block's image
     <!-- src: https://... -->      download the image
     <!-- shot: https://... -->     screenshot the page
@@ -21,6 +22,9 @@ The grammar it accepts (see ADD.md):
     <!-- locked -->                hand-edited, keep as is
     <!-- notoc -->                 keep off the contents
     <!-- profile -->               picture left, text right
+    <!-- closing -->               big centred sign-off
+    <!-- promo -->                 large call to action
+    **bold** ==highlight== !!red!! `code`   inline markup
     - a body bullet                body text
     - https://example.com          rendered as a link
 
@@ -76,13 +80,32 @@ RE_FLAG = re.compile(r"^<!--\s*(\w+)\s*-->$")
 RE_BULLET = re.compile(r"^[-*]\s+(.*)$")
 RE_QUOTE = re.compile(r"^>\s*(.*)$")
 
+# Inline markup inside a bullet. pptx_text turns each piece
+# into a styled run; test_markup_styles_agree pins the two
+# vocabularies together.
+RE_MARKUP = re.compile(
+    r"(\*\*.+?\*\*|==.+?==|!!.+?!!|`[^`]+`)"
+)
+
+STYLE_PLAIN = "plain"
+STYLE_BOLD = "bold"
+STYLE_HILITE = "hilite"
+STYLE_CODE = "code"
+STYLE_RED = "red"
+
 FLAG_LOCKED = "locked"
 FLAG_DELETED = "deleted"
 FLAG_NOTOC = "notoc"
 FLAG_PROFILE = "profile"
+FLAG_CLOSING = "closing"
+FLAG_PROMO = "promo"
 FLAGS = (
     FLAG_LOCKED, FLAG_DELETED, FLAG_NOTOC, FLAG_PROFILE,
+    FLAG_CLOSING, FLAG_PROMO,
 )
+
+# Flags a block inherits from the section heading above it.
+INHERITED_FLAGS = (FLAG_PROFILE, FLAG_CLOSING, FLAG_PROMO)
 
 # Sidecar holding the topics a human threw out. Cutting an
 # item into this file is how deletion is recorded.
@@ -106,6 +129,8 @@ class Block:
     deleted: bool = False
     notoc: bool = False
     profile: bool = False
+    closing: bool = False
+    promo: bool = False
 
 
 @dataclass
@@ -119,6 +144,8 @@ class Section:
     deleted: bool = False
     notoc: bool = False
     profile: bool = False
+    closing: bool = False
+    promo: bool = False
 
 
 @dataclass
@@ -137,6 +164,32 @@ def is_link(text):
     if " " in stripped:
         return False
     return stripped.startswith(("http://", "https://"))
+
+
+# --------------------------------------------------------------
+def split_markup(text):
+    """Split a bullet into (text, style) pieces."""
+    pieces = []
+    for part in RE_MARKUP.split(text):
+        if not part:
+            continue
+        if part.startswith("**") and part.endswith("**"):
+            pieces.append((part[2:-2], STYLE_BOLD))
+        elif part.startswith("==") and part.endswith("=="):
+            pieces.append((part[2:-2], STYLE_HILITE))
+        elif part.startswith("!!") and part.endswith("!!"):
+            pieces.append((part[2:-2], STYLE_RED))
+        elif part.startswith("`") and part.endswith("`"):
+            pieces.append((part[1:-1], STYLE_CODE))
+        else:
+            pieces.append((part, STYLE_PLAIN))
+    return pieces
+
+
+# --------------------------------------------------------------
+def strip_markup(text):
+    """The bullet's words, without the markup characters."""
+    return "".join(piece for piece, _ in split_markup(text))
 
 
 # --------------------------------------------------------------
@@ -235,7 +288,12 @@ def _handle_heading(deck, line, lineno):
         section = deck.sections[-1]
         # A flag on the section heading is read before its
         # blocks exist, so new blocks inherit it here.
-        block = Block(headline=text, profile=section.profile)
+        block = Block(
+            headline=text,
+            profile=section.profile,
+            closing=section.closing,
+            promo=section.promo,
+        )
         section.blocks.append(block)
         return block
     raise DeckError(f"line {lineno}: heading too deep")
@@ -264,10 +322,10 @@ def _apply_flag(deck, block, name, lineno):
         target.notoc = True
         return
 
-    if name == FLAG_PROFILE:
-        target.profile = True
+    if name in INHERITED_FLAGS:
+        setattr(target, name, True)
         for block in getattr(target, "blocks", []):
-            block.profile = True
+            setattr(block, name, True)
         return
 
     target.locked = True
@@ -462,8 +520,9 @@ def all_headlines(deck):
         if section.notoc:
             continue
         for block in live_blocks(section):
-            if not block.notoc:
-                names.append(block.headline)
+            if block.notoc or not block.headline:
+                continue
+            names.append(block.headline)
     return names
 
 

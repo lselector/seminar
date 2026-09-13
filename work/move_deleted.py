@@ -82,9 +82,10 @@ def log_message(message):
 # --------------------------------------------------------------
 def segment_kind(line):
     """Return 'block', 'section', or None for a line."""
-    if line.startswith(BLOCK_PREFIX):
+    stripped = line.rstrip()
+    if line.startswith(BLOCK_PREFIX) or stripped == "###":
         return "block"
-    if line.startswith(SECTION_PREFIX):
+    if line.startswith(SECTION_PREFIX) or stripped == "##":
         return "section"
     return None
 

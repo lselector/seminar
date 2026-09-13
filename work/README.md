@@ -78,10 +78,28 @@ Each `-` line becomes a bulleted line with a red dot, so
 write one short factual statement per bullet rather than a
 paragraph. Five to seven of them per story works well.
 
-Inside a bullet, `**bold**` makes bold text and
-`==highlight==` paints the pale yellow used in the older
-decks. A bullet that is nothing but a URL becomes a small
-blue clickable link, sized to match the body text.
+A `###` on its own, with no text after it, makes a block of
+just bullets and no heading. The Thank You page uses that,
+since its big title already says everything.
+
+Body text on news slides is Calibri 12. The headline of
+each box is bold and red, as in the older decks.
+
+Inside a bullet:
+
+| Markup | Result |
+|---|---|
+| `**bold**` | bold |
+| `==highlight==` | pale yellow highlight |
+| `!!red!!` | bold red, for a call to action |
+| `` `code` `` | Consolas 9 pt in blue |
+
+A bullet that is nothing but a URL becomes a small blue
+clickable link, sized to match the body text.
+
+Use backticks for anything a reader would type or paste:
+
+    - Pull it locally with `ollama run SparkLLM/Spark-X2.5-4B`
 
 **The epigraph** is one short line under the deck title,
 drawn in red at the top right of the contents page:
@@ -100,6 +118,9 @@ one you changed yourself.
     ## slide: toc           the table of contents
     ## slide: benchmarks    the Arena top 25
 
+The benchmarks page runs at 9 pt, since it is 50 lines of
+data. Everything else on it is automatic.
+
 The contents page is generated from every `###` headline in
 the file, so it can never disagree with the slides. There is
 nothing to type there and nothing to keep in step.
@@ -115,7 +136,9 @@ heading is normal.
 
 Text boxes come out with the pale yellow fill and thin red
 border of the older decks, sized to hug their text with no
-slack left over. Pictures get the same red border. Slide
+slack left over, and spaced so there is white space above,
+between and below them rather than one box pressed against
+the title. Pictures get the same red border. Slide
 titles are left plain. A slide with room to spare uses
 larger text, up to 16 pt. All of it is automatic.
 
@@ -133,11 +156,18 @@ marker tells it to keep its hands off, on its own line.
     <!-- locked -->
     - my wording, not the assistant's
 
-There is one more marker, `<!-- profile -->`, already on
-the About the Speaker section. It gives that slide the
-shape the older decks used: a large portrait on the left
-with the details beside it, and the name set larger. It is
-the only slide that needs it.
+Two more markers name the two slides that are not news,
+and both are already in place:
+
+- `<!-- profile -->` on About the Speaker: a large portrait
+  and the details beside it, the pair centred on the slide,
+  the name set larger, and no box drawn.
+- `<!-- closing -->` on Thank You!: the title at 40 pt,
+  centred a third of the way down, with the links centred
+  under it and no box around either.
+- `<!-- promo -->` on the channel page: 22 pt text and
+  18 pt links in a yellow box on the left, a wide
+  screenshot beside it, and no bullet dots.
 
 Put the marker under a `###` to cover that one item, or
 directly under a `## slide:` heading to cover the whole

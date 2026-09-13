@@ -26,21 +26,31 @@ Last updated: 2026-09-12
 
 import deck_layout as L
 from pptx_text import (
-    BOX_PAD, COLOR_LINK, COLOR_MUTED, add_textbox,
-    first_or_new, style_run,
+    BOX_PAD, COLOR_HEADLINE, COLOR_LINK, COLOR_MUTED,
+    add_textbox, first_or_new, style_run,
 )
 from text_metrics import text_width
 from pptx.dml.color import RGBColor
 from pptx.util import Pt
 
 BENCH_ROWS = 25
-BENCH_CAPTION_SIZE = 11
-BENCH_GAP = 0.40
-BENCH_TOP = 0.62
-BENCH_SIZE_MAX = 11
+
+# This page carries 50 lines of data, so it runs smaller
+# than the rest of the deck. The caption follows the usual
+# "one point above the body, bold and red" rule.
+BENCH_SIZE = 9
+BENCH_CAPTION_SIZE = BENCH_SIZE + 1
 BENCH_SIZE_MIN = 6
 BENCH_LINE_RATIO = 1.20
+
+BENCH_GAP = 0.50
 LEGEND_SIZE = 9
+
+# The vote-cutoff note reads at the normal body size, in an
+# ordinary yellow box on the header row beside the legend.
+DATE_SIZE = 12
+HEADER_Y = 0.38
+HEADER_GAP = 0.08
 
 # The vendor swatch. A coloured character in an ordinary
 # paragraph has no minimum height, unlike a table cell.
@@ -73,13 +83,26 @@ VENDOR_LABELS = [
 
 # --------------------------------------------------------------
 # --------------------------------------------------------------
+def header_height():
+    """Height of the legend and date row under the title."""
+    tall = DATE_SIZE * BENCH_LINE_RATIO / 72.0
+    return tall + BOX_PAD
+
+
+# --------------------------------------------------------------
+def bench_top():
+    """Top of the two columns, clear of the header row."""
+    return HEADER_Y + header_height() + HEADER_GAP
+
+
+# --------------------------------------------------------------
 def bench_font_size(rows, height_in):
-    """Largest size at which the rows fit their column."""
+    """Body size, stepped down only if the rows will not fit."""
     if rows <= 0:
-        return BENCH_SIZE_MAX
+        return BENCH_SIZE
     available = height_in * 72.0
     fits = available / (rows * BENCH_LINE_RATIO)
-    return max(BENCH_SIZE_MIN, min(BENCH_SIZE_MAX, fits))
+    return max(BENCH_SIZE_MIN, min(BENCH_SIZE, fits))
 
 
 # --------------------------------------------------------------
@@ -159,7 +182,10 @@ def add_bench_caption(frame, board):
     tighten(label, BENCH_CAPTION_SIZE)
     run = label.add_run()
     run.text = board.get("label", "")
-    style_run(run, BENCH_CAPTION_SIZE, bold=True)
+    style_run(
+        run, BENCH_CAPTION_SIZE, bold=True,
+        color=COLOR_HEADLINE
+    )
 
     url = board.get("url", "")
     if not url:
@@ -181,15 +207,22 @@ def caption_height():
 
 
 # --------------------------------------------------------------
+def column_height(rows, size):
+    """Height a column needs, caption and rows together."""
+    body = rows * size * BENCH_LINE_RATIO / 72.0
+    return caption_height() + body + BOX_PAD
+
+
+# --------------------------------------------------------------
 def build_bench_column(slide, left, width, board, size):
     """Draw one leaderboard as a single boxed column."""
     entries = board.get("entries", [])[:BENCH_ROWS]
     if not entries:
         return
-    height = L.BAND_BOT - BENCH_TOP
+    height = column_height(len(entries), size)
 
     frame = add_textbox(
-        slide, L.Rect(left, BENCH_TOP, width, height),
+        slide, L.Rect(left, bench_top(), width, height),
         boxed=True
     )
     frame.word_wrap = False
@@ -227,21 +260,21 @@ def cutoff_note(boards):
 
 # --------------------------------------------------------------
 def render_cutoff(slide, boards):
-    """Draw the vote cutoff at the right of the legend."""
+    """Draw the vote cutoff beside the legend."""
     note = cutoff_note(boards)
     if not note:
         return
-    width = text_width(note, LEGEND_SIZE) + L.TEXT_INSET
+    width = text_width(note, DATE_SIZE) + L.TEXT_INSET
     rect = L.Rect(
-        L.SLIDE_W - L.MARGIN - width,
-        L.TITLE_H + 0.02, width, 0.22
+        L.SLIDE_W - L.MARGIN - width, HEADER_Y,
+        width, header_height()
     )
-    frame = add_textbox(slide, rect)
+    frame = add_textbox(slide, rect, boxed=True)
     para = frame.paragraphs[0]
-    tighten(para, LEGEND_SIZE)
+    tighten(para, DATE_SIZE)
     run = para.add_run()
     run.text = note
-    style_run(run, LEGEND_SIZE, color=COLOR_MUTED)
+    style_run(run, DATE_SIZE)
 
 
 # --------------------------------------------------------------
@@ -253,7 +286,7 @@ def render_legend(slide):
         for _, label in VENDOR_LABELS
     ) + L.TEXT_INSET
     rect = L.Rect(
-        L.MARGIN, L.TITLE_H + 0.02, width, 0.22
+        L.MARGIN, HEADER_Y, width, header_height()
     )
     frame = add_textbox(slide, rect, boxed=True, fit=True)
     para = frame.paragraphs[0]
@@ -281,7 +314,7 @@ def render_benchmarks_page(slide, data):
     render_legend(slide)
     render_cutoff(slide, boards)
 
-    height = L.BAND_BOT - BENCH_TOP
+    height = L.BAND_BOT - bench_top()
     rows = max(
         len(b.get("entries", [])[:BENCH_ROWS]) for b in boards
     )
@@ -293,11 +326,14 @@ def render_benchmarks_page(slide, data):
         min(limit, column_width(b, size)) for b in boards
     ]
 
-    # First column on the left edge, second on the right, so
-    # the space they no longer need reads as a gutter rather
-    # than a gap at the end of the slide.
-    lefts = [L.MARGIN]
-    if len(boards) > 1:
-        lefts.append(L.SLIDE_W - L.MARGIN - widths[1])
+    # The pair sits together in the middle of the slide
+    # rather than pinned to the two edges with a hole
+    # between them.
+    total = sum(widths) + BENCH_GAP * (len(widths) - 1)
+    left = (L.SLIDE_W - total) / 2
+    lefts = []
+    for width in widths:
+        lefts.append(left)
+        left += width + BENCH_GAP
     for board, left, width in zip(boards, lefts, widths):
         build_bench_column(slide, left, width, board, size)
