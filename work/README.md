@@ -395,7 +395,70 @@ A build ends with a summary worth a glance:
   If it ever goes past 8 MB the build tells you how to
   shrink it.
 
-## 9. Finishing the week
+## 9. Pushing to Google Slides
+
+The same Markdown also builds a Google Slides deck, if you
+would rather do your final pass in Slides than in PowerPoint:
+
+    python3 s4_push_slides.py <FOLDER_ID>
+    python3 s4_push_slides.py <FOLDER_ID> 2026-09-18-AI-News.md
+
+The folder id is the tail of the address bar with the folder
+open in Drive:
+
+    .../drive/folders/THIS_PART_IS_THE_ID
+
+It creates a new presentation named after the deck file with
+`-Template` on the end, so `2026-09-18-AI-News.md` becomes
+`2026-09-18-AI-News-Template`. Every run makes a fresh deck.
+Nothing overwrites a deck you have been editing, so once you
+start working on one by hand it is yours.
+
+Two things to know before the first run:
+
+- Sign in once with `python3 g_auth.py <FOLDER_ID>`. It saves
+  `credentials/token.json`, which is gitignored. The script
+  runs under the `drive.file` scope, so it can only ever see
+  the decks it created itself. The rest of your Drive is out
+  of reach, enforced by Google rather than by this code.
+- Pictures are fetched by Google from the public GitHub copy
+  of this repository, because Google cannot read your Drive
+  or your laptop. **Commit and push `work/images/` first**,
+  or the picture boxes come back empty.
+
+### How the script knows its own work
+
+Every shape it creates gets an object id built from the
+topic's own words, not from where the topic sits:
+
+    s-meta-ships-muse-agent-with-a345    the slide
+    t-meta-ships-muse-agent-with-its-a345-b    the text box
+    t-meta-ships-muse-agent-with-its-a345-p    the picture
+
+The rule is simple. **An id starting with `s-` or `t-`
+belongs to the script. Everything else is yours and is never
+touched.**
+
+That matters because Slides makes object ids unique across a
+whole presentation. If you copy one of the script's boxes to
+start a topic of your own, Google is forced to give the copy
+a fresh id like `SLIDES_API1757334605_0`, so the copy stops
+being the script's the moment you paste it. You keep the
+formatting and lose nothing.
+
+Three things follow, and all three are what you want:
+
+- A box you add by hand has no such id, so it survives. You
+  do not have to mark it in any way.
+- The id comes from the headline, so reordering slides,
+  editing the text, or filling a box with colour all leave
+  it intact.
+- Two topics never collide. Headlines are shortened to 32
+  characters, and the four characters on the end are a hash
+  of the full headline, so two topics that shorten to the
+  same words still stay apart.
+
+## 10. Finishing the week
 
 Copy the deck into the year directory and commit:
 
@@ -415,6 +478,9 @@ Nothing here writes to `../2026/` on its own.
 | `Orphan (no raw source)` | A file in `images/` with nothing behind it in `images_raw/`. Harmless. Delete it when you are sure |
 | ImageMagick not found | `brew install imagemagick` |
 | Screenshots all fail | Google Chrome is missing from `/Applications` |
+| Slides pictures come out blank | `work/images/` is not on GitHub yet. Commit and push, then run `s4_push_slides.py` again |
+| `credentials/token.json not found` | Run `python3 g_auth.py <FOLDER_ID>` once |
+| `The object ID ... should be unique` | Two slides got the same id. Only happens if you edit the id prefixes in `s4_push_slides.py` |
 
 ## The files here
 
@@ -430,6 +496,11 @@ Nothing here writes to `../2026/` on its own.
 | `s2_clean_images.py` | Normalizes them |
 | `s3_make_pptx.py` | Builds the PPTX |
 | `pptx_text.py` | The palette, fonts, and text boxes |
+| `s4_push_slides.py` | Builds the same deck in Google Slides |
+| `slides_api.py` | Slides requests for boxes, text, and art |
+| `topic_ids.py` | Stable object ids, so the script knows its own work |
+| `test_ids.py` | Object id tests. `python3 test_ids.py` |
+| `g_auth.py` | Signs in to Google once, then self-tests |
 | `bench_page.py` | The benchmarks slide |
 | `move_deleted.py` | Sweeps items marked `<!-- deleted -->` into the deleted file |
 | `leaderboard.py` | Arena benchmarks into XLSX and JSON |
