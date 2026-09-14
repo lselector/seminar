@@ -145,7 +145,7 @@ helps; a flat ranked list is usually clearer.
 ## Writing style
 
 The descriptions are prose, so follow the `humanize` skill at
-`.claude/skills/humanize/SKILL.md`. Write plainly from the
+`~/.claude/skills/humanize/SKILL.md`. Write plainly from the
 first draft. State what happened and what it changes. Skip
 hype adjectives, and do not pad an event to fill space when
 one sentence covers it.

@@ -1,516 +1,184 @@
-# Building the weekly deck
+# Building the weekly seminar deck
 
-This directory turns one Markdown file into the weekly
-seminar PPTX.
+The Google Slides deck is the source of truth. There is no
+Markdown file and no PPTX in this workflow. Scripts read the
+live deck, change only what they own, and leave everything
+else alone, so you can edit the deck by hand at any time,
+before, between or after any script run.
 
-The Markdown file is the real deck. The PPTX is built from
-it and can be deleted and rebuilt at any time. So edits go
-in the `.md` file, not in PowerPoint, with one exception
-covered at the end.
+This page is how to use it. The design, the measurements
+behind it and the reasons are in `ADD.md`.
 
-For the design and the reasoning, see `ADD.md`.
+## The three rules you need to know
 
-## The three files for one week
+**1. A fill freezes a box.** Scripts draw text boxes with a
+red border and no background. Give a box any background
+colour and no script will touch it again, or its picture.
+This is how you accept a topic: edit it if you like, then
+fill it yellow.
 
-    2026-09-18-AI-News.md              you edit this
-    2026-09-18-AI-News-generated.pptx  built from it
-    2026-09-18-AI-News-deleted.md      topics you threw out
+**2. The separator slide is a wall.** Slide 10 says "Not in
+the presentation". Nothing after it is ever written. To drop
+a topic, copy its box onto the "Parked topics" slide and
+delete the original. It will never be added again, even if
+next week's news words it differently.
 
-The date is the Friday of the seminar. The `-generated`
-part of the name matters: the scripts only ever write files
-with that suffix, so the hand-made decks in `../2026/` can
-never be overwritten by mistake.
+**3. Your own boxes are always yours.** Anything you add by
+hand, including a copy of a script box, belongs to you. No
+script changes it or removes it.
 
-## 1. The easy way: run the skill
+That is all. Everything else below is detail.
 
-In Claude Code:
+## One-time setup
 
-    /slides-update
+Already done on this machine. For another one:
 
-or with a date:
+    python3 g_auth.py <FOLDER_ID>
 
-    /slides-update 2026-10-02
+It opens a browser to sign in and saves
+`credentials/token.json`, which git ignores. The folder id
+and the source URLs live in `config/gslides.json`.
 
-With no date it uses the coming Friday. On a Friday it uses
-today, not next week. It creates the `.md` file if it does
-not exist, adds the week's news, and builds the PPTX.
+## The weekly routine
 
-## 2. Doing it by hand
+Run these from `work/`. Every command takes an optional date
+(`2026-09-18`); without one it works on the next Friday, or
+today when today is Friday.
 
-Four commands, run from this directory:
+| Step | Command | Skill |
+|---|---|---|
+| 1. Create the deck | `python3 g1_new_deck.py` | |
+| 2. Add news | `python3 g2_add_news.py --json news.json` | `/gslides-add-news` |
+| 3. Contents and epigraph | `python3 g3_update_toc.py` | `/gslides-update-toc` |
+| 4. Benchmarks | `python3 g4_update_bench.py` | `/gslides-update-benchmarks` |
+| 5. Intelligence Index | `python3 g5_update_aa_index.py` | `/gslides-update-aa-index` |
+| 6. YouTube counts | `python3 g6_update_youtube.py` | `/gslides-update-youtube` |
+| 7. Layoffs | `python3 g7_update_layoffs.py --json lay.json` | `/gslides-update-layoffs` |
+| Before presenting | `python3 g8_preflight.py` | |
 
-    python3 leaderboard.py
-    python3 s1_fetch_images.py 2026-09-18-AI-News.md
-    python3 s2_clean_images.py
-    python3 s3_make_pptx.py 2026-09-18-AI-News.md
+Steps 2 to 7 can run in any order, as often as you like.
+Running one twice either refreshes it or does nothing. Steps
+that need judgement (finding news, reading numbers off a web
+page) are skills: Claude does the reading and hands the
+result to the script as JSON.
 
-What each one does:
+## The deck
 
-| Script | Job |
+| # | Slide | Filled by |
+|---|---|---|
+| 1 | Title, contents, epigraph | Step 3 |
+| 2 | Benchmarks | Step 4 |
+| 3 | Artificial Analysis Intelligence Index | Step 5 |
+| 4 | AI News (placeholder) | Step 2 |
+| 5 | Weekly videos every Friday | Step 6 |
+| 6 | AI News (placeholder) | Step 2 |
+| 7 | Jobs and Layoffs | Step 7 |
+| 8 | About the Speaker | fixed |
+| 9 | Thank You! | fixed |
+| 10 | Not in the presentation | never touched |
+| 11 | Parked topics | never touched |
+
+News goes onto slides 4 and 6 first. Further news slides are
+inserted just before Jobs and Layoffs, wherever that slide
+is at the time. If you put anything of your own on slide 4 or
+6, that slide is no longer used for news.
+
+## What each step does to your edits
+
+| You did this | What scripts do |
 |---|---|
-| `leaderboard.py` | Downloads the Arena top 25 into XLSX and JSON, with the date the votes were counted through. Fills the Benchmarks slide |
-| `s1_fetch_images.py` | Downloads or screenshots every picture the `.md` file asks for, into `images_raw/` |
-| `s2_clean_images.py` | Converts them into slide-ready JPEGs in `images/` |
-| `s3_make_pptx.py` | Builds the PPTX |
-
-All four are safe to run again. They skip work that is
-already done, so nothing is lost by repeating them.
-
-## 3. Editing the Markdown
-
-The whole file is built from four things.
-
-**A section heading** starts a group of news:
-
-    ## slide: AI News
-
-**A news item** inside it:
-
-    ### Nvidia buys Hugging Face for $13 Billion
-    ![](images/nvidia-hf.jpg)
-    <!-- shot: https://huggingface.co/blog/nvidia -->
-    - Hugging Face hosts roughly 3 Mln models
-    - **Nvidia sells the compute those models run on**
-    - Cheap open models are closing the gap
-    - https://huggingface.co/blog/nvidia
-
-Each `-` line becomes a bulleted line with a red dot, so
-write one short factual statement per bullet rather than a
-paragraph. Five to seven of them per story works well.
-
-A `###` on its own, with no text after it, makes a block of
-just bullets and no heading. The Thank You page uses that,
-since its big title already says everything.
-
-Body text on news slides is Calibri 12. The headline of
-each box is bold and red, as in the older decks.
-
-Inside a bullet:
-
-| Markup | Result |
-|---|---|
-| `**bold**` | bold |
-| `==highlight==` | pale yellow highlight |
-| `!!red!!` | bold red, for a call to action |
-| `` `code` `` | Consolas 9 pt in blue |
-
-A bullet that is nothing but a URL becomes a small blue
-clickable link, sized to match the body text.
-
-Use backticks for anything a reader would type or paste:
-
-    - Pull it locally with `ollama run SparkLLM/Spark-X2.5-4B`
-
-**The epigraph** is one short line under the deck title,
-drawn in red at the top right of the contents page:
-
-    # AI News - Sept 18, 2026
-
-    > Agents got their own computers. Oversight is still catching up.
-
-Keep it under about 70 characters. The build warns if it
-wraps past two lines and crowds the page. The skill writes
-one for you from the week's stories, and will not overwrite
-one you changed yourself.
-
-**Two special headings** fill themselves in:
-
-    ## slide: toc           the table of contents
-    ## slide: benchmarks    the Arena top 25
-
-The benchmarks page runs at 9 pt, since it is 50 lines of
-data. Everything else on it is automatic.
-
-The contents page is generated from every `###` headline in
-the file, so it can never disagree with the slides. There is
-nothing to type there and nothing to keep in step.
-
-### Do not write any layout
-
-There is no way to set a position, a width, a font size, or
-a slide break, and this is on purpose. Put as many `###`
-items under one `## slide:` heading as the week needs, and
-the generator splits them across as many slides as the text
-requires, repeating the title. Seven stories under one
-heading is normal.
-
-Text boxes come out with the pale yellow fill and thin red
-border of the older decks, sized to hug their text with no
-slack left over, and spaced so there is white space above,
-between and below them rather than one box pressed against
-the title. Pictures get the same red border. Slide
-titles are left plain. A slide with room to spare uses
-larger text, up to 16 pt. All of it is automatic.
-
-If a slide comes out looking wrong, the fix belongs in
-`deck_layout.py`, where it improves every future deck too.
-
-## 4. Protecting your own edits
-
-The assistant may edit this file again next week. One
-marker tells it to keep its hands off, on its own line.
-
-**You rewrote something and want it kept exactly:**
-
-    ### A story I reworded myself
-    <!-- locked -->
-    - my wording, not the assistant's
-
-Two more markers name the two slides that are not news,
-and both are already in place:
-
-- `<!-- profile -->` on About the Speaker: a large portrait
-  and the details beside it, the pair centred on the slide,
-  the name set larger, and no box drawn.
-- `<!-- closing -->` on Thank You!: the title at 40 pt,
-  centred a third of the way down, with the links centred
-  under it and no box around either.
-- `<!-- promo -->` on the channel page: 22 pt text and
-  18 pt links in a yellow box on the left, a wide
-  screenshot beside it, and no bullet dots.
-
-Put the marker under a `###` to cover that one item, or
-directly under a `## slide:` heading to cover the whole
-section. The About the Speaker, YouTube, and Thank You
-sections come locked already.
-
-**You threw a topic out and do not want it back:** cut it
-out of the deck and paste it into the deleted file. See the
-next section.
-
-### Deleting a topic
-
-Do not just cut a story out and throw it away. If you do,
-the assistant reads the deck next week, does not find the
-story, finds it again in the news, and puts it back.
-
-The story has to end up in `2026-09-18-AI-News-deleted.md`,
-which is the record of what you threw out. There are two
-ways to get it there. Both end in the same place, so use
-whichever suits the moment.
-
-**Method 1: move it yourself.** Good for one item while you
-are already editing.
-
-1. Cut the whole `###` item out of
-   `2026-09-18-AI-News.md`.
-2. Paste it into `2026-09-18-AI-News-deleted.md`, keeping
-   its `###` heading. That heading is the record.
-3. Optionally add a line saying why. Anything that is not a
-   `###` heading is treated as a note and ignored.
-
-**Method 2: mark them and run the script.** Easier when you
-are dropping several, because you never leave the deck file
-or lose your place.
-
-Put the marker on its own line under each item you want
-gone:
-
-    ### A story I do not want
-    <!-- deleted -->
-    - its bullets stay with it
-
-Then sweep them all out in one go:
-
-    python3 move_deleted.py --dry-run
-    python3 move_deleted.py
-
-The dry run lists what would move and changes nothing. The
-real run cuts every marked item out of the deck, appends it
-to the deleted file with the date it moved, and drops the
-marker line, since in the deleted file the heading alone is
-the record. Text moves verbatim: bullets, images, links, and
-formatting all survive.
-
-The marker also works on a `## slide:` heading, which moves
-that whole section and every item in it.
-
-Your previous deck is kept as `2026-09-18-AI-News.md.bak`,
-and the script refuses to touch a deck that does not parse.
-
-Rebuild afterwards with `python3 s3_make_pptx.py`.
-
-Nothing in the deleted file goes on a slide, and the
-assistant will not write any of those topics back into the
-deck. To bring something back, cut it out of the deleted
-file and paste it into the deck again.
-
-Matching is on the topic, not the exact wording. A story
-re-added under a shortened or reworded heading is still
-caught, so the assistant cannot slip one past by rephrasing
-it. Two genuinely different stories about the same company
-are not confused.
-
-Both the build and the checker tell you if a thrown-out
-topic is back:
-
-    WARNING: 'The music industry stops fighting'
-      matches 'The music industry stops fighting and starts
-      licensing' in 2026-09-18-AI-News-deleted.md
-
-### What is and is not protected
-
-An item you edited **without** adding `<!-- locked -->`
-looks exactly like one the assistant wrote, so nothing can
-tell them apart. Mark what you want to keep.
-
-Anything you add is safe without a marker: the assistant is
-not allowed to remove an item that already exists.
-
-To check that a round of edits preserved your work:
-
-    python3 ../.claude/skills/slides-update/tools/check_preserved.py \
-        before.md 2026-09-18-AI-News.md
-
-It exits 0 when every protected item survived, and
-otherwise lists what changed. Committing the `.md` file to
-git before a session is the wider safety net.
-
-## 5. Adding a picture by hand
-
-Most pictures come from the `.md` file itself. Two forms:
-
-    <!-- src: https://example.com/photo.jpg -->   download it
-    <!-- shot: https://example.com/article -->    screenshot the page
-
-`shot:` is the one to reach for. It photographs the source
-page with Chrome, which always gives a relevant picture and
-saves hunting for one.
-
-For your own picture, a photo or a crop you made yourself:
-
-1. Put the file in `images_raw/`. Any format works: PNG,
-   JPEG, HEIC, WebP.
-2. Name it after what it shows, with no spaces, for example
-   `images_raw/lev-photo.png`.
-3. Run `python3 s2_clean_images.py`. It writes
-   `images/lev-photo.jpg`.
-4. Reference it in the `.md` file **with no comment under
-   it**, which is what marks it as yours:
-
-        ### Lev Selector, Ph.D.
-        ![](images/lev-photo.jpg)
-        - 40+ years of software engineering
-
-A picture with no `src:` or `shot:` comment is never
-downloaded or overwritten. It is only checked for existence.
-
-Put originals in `images_raw/`, not in `images/`. Files that
-sit in `images/` with no source get reported as orphans
-every run, because `images/` is meant to be disposable.
-
-### Replacing a bad screenshot
-
-If a screenshot catches a cookie banner or a half-loaded
-page, replace the file in `images_raw/` with a picture you
-took yourself, keeping the same name, then run
-`s2_clean_images.py` again. Or re-shoot it:
-
-    python3 s1_fetch_images.py 2026-09-18-AI-News.md --force
-
-## 6. Final touches just before the seminar
-
-This is the case that has to work without thinking. Edit
-the `.md` file, then run one command:
-
-    python3 s3_make_pptx.py
-
-With no file named it takes the newest `*-AI-News.md` in
-this directory and prints which one it picked. It needs no
-network and takes under a second.
-
-Only run `s1` and `s2` again if you added or changed a
-picture. A text-only fix needs the one command above.
-
-Two things to know:
-
-- **Close the deck in PowerPoint first.** PowerPoint keeps
-  its own copy in memory and can write it back over the
-  freshly built file when you save.
-- If you made the change in PowerPoint instead of the `.md`
-  file, it will be lost on the next build. Put it in the
-  `.md` file as well.
-
-## 7. Keeping the file small
-
-You used to open the finished PPTX, pick a picture, and run
-**Compress Pictures** with "email (96 ppi)" and "delete
-cropped areas", which took a deck from 20 or 30 MB down to
-about 2 MB. That step is gone. The deck never gets large in
-the first place.
-
-A PPTX is almost entirely its pictures, and
-`s2_clean_images.py` already scales every picture to the
-largest box the layout can give it, which is 3.60 by 5.07
-inches. At the default 150 ppi that is 540 by 760 pixels.
-Anything beyond that is bytes the slide cannot show. There
-are no cropped areas to delete either, because pictures are
-trimmed before they go in, not cropped afterwards.
-
-A typical deck of 11 pictures comes out around **340 KB**.
-
-If you want it smaller or sharper, change the resolution
-and rebuild:
-
-    python3 s2_clean_images.py --ppi 96     # smallest
-    python3 s2_clean_images.py              # 150, default
-    python3 s2_clean_images.py --ppi 220    # sharpest
-    python3 s3_make_pptx.py
-
-Measured on the Sept 18 deck:
-
-| Setting | Deck size |
-|---|---|
-| `--ppi 96`, PowerPoint's "email" | 190 KB |
-| `--ppi 150`, the default | 338 KB |
-| `--ppi 220`, PowerPoint's "print" | 591 KB |
-
-Changing `--ppi` or `--quality` rebuilds every picture
-automatically, because the setting is recorded inside each
-file. You do not need `--force`.
-
-The pictures in `images_raw/` stay full size. Only the
-copies in `images/` are shrunk, so raising the resolution
-later costs one command and no re-downloading.
-
-## 8. Reading the output
-
-A build ends with a summary worth a glance:
-
-    Sections: 11, news items: 13
-    Slides written: 11
-    Topics in the deleted file: 1
-    Missing images: 1
-    Overflowing slides: 0
-    Wrote ...-generated.pptx (338 KB, 86% pictures)
-
-- **Missing images** names each one. That item still renders,
-  using the full slide width for its text.
-- **Overflowing slides** means one item has too much text to
-  fit even at 8 pt. Split it into two `###` items.
-- **Topics in the deleted file** counts what you threw out.
-  If one of them is back in the deck, a loud `WARNING` names
-  it just above this summary.
-- **The size line** says how much of the deck is pictures.
-  If it ever goes past 8 MB the build tells you how to
-  shrink it.
-
-## 9. Pushing to Google Slides
-
-The same Markdown also builds a Google Slides deck, if you
-would rather do your final pass in Slides than in PowerPoint:
-
-    python3 s4_push_slides.py <FOLDER_ID>
-    python3 s4_push_slides.py <FOLDER_ID> 2026-09-18-AI-News.md
-
-The folder id is the tail of the address bar with the folder
-open in Drive:
-
-    .../drive/folders/THIS_PART_IS_THE_ID
-
-It creates a new presentation named after the deck file with
-`-Template` on the end, so `2026-09-18-AI-News.md` becomes
-`2026-09-18-AI-News-Template`. Every run makes a fresh deck.
-Nothing overwrites a deck you have been editing, so once you
-start working on one by hand it is yours.
-
-Two things to know before the first run:
-
-- Sign in once with `python3 g_auth.py <FOLDER_ID>`. It saves
-  `credentials/token.json`, which is gitignored. The script
-  runs under the `drive.file` scope, so it can only ever see
-  the decks it created itself. The rest of your Drive is out
-  of reach, enforced by Google rather than by this code.
-- Pictures are fetched by Google from the public GitHub copy
-  of this repository, because Google cannot read your Drive
-  or your laptop. **Commit and push `work/images/` first**,
-  or the picture boxes come back empty.
-
-### How the script knows its own work
-
-Every shape it creates gets an object id built from the
-topic's own words, not from where the topic sits:
-
-    s-meta-ships-muse-agent-with-a345    the slide
-    t-meta-ships-muse-agent-with-its-a345-b    the text box
-    t-meta-ships-muse-agent-with-its-a345-p    the picture
-
-The rule is simple. **An id starting with `s-` or `t-`
-belongs to the script. Everything else is yours and is never
-touched.**
-
-That matters because Slides makes object ids unique across a
-whole presentation. If you copy one of the script's boxes to
-start a topic of your own, Google is forced to give the copy
-a fresh id like `SLIDES_API1757334605_0`, so the copy stops
-being the script's the moment you paste it. You keep the
-formatting and lose nothing.
-
-Three things follow, and all three are what you want:
-
-- A box you add by hand has no such id, so it survives. You
-  do not have to mark it in any way.
-- The id comes from the headline, so reordering slides,
-  editing the text, or filling a box with colour all leave
-  it intact.
-- Two topics never collide. Headlines are shortened to 32
-  characters, and the four characters on the end are a hash
-  of the full headline, so two topics that shorten to the
-  same words still stay apart.
-
-## 10. Finishing the week
-
-Copy the deck into the year directory and commit:
-
-    cp 2026-09-18-AI-News-generated.pptx ../2026/
-    cd .. && git add . && git commit -m "slides for 2026-09-18"
-
-Nothing here writes to `../2026/` on its own.
+| Filled a box | Never change it or its picture |
+| Typed in an unfilled script box | May overwrite it on the next run. Fill it to keep it |
+| Added your own box or slide | Never touch it |
+| Copied a script box | The copy is yours |
+| Moved or resized a script box | Keep its position and width. Its height follows its text when rewritten, growing only into free space |
+| Reordered slides | Follow the new order: the contents list it, news goes before layoffs wherever it is |
+| Parked a topic | Never add it again |
+| Deleted a topic outright | Never add it again (the ledger remembers) |
+| Filled one contents column | Leave the whole contents alone |
+| Wrote your own epigraph | Keep it |
+| Deleted a fixed slide | That step reports it and does nothing |
+
+The **topic ledger** lives in the speaker notes of the
+separator slide. Step 2 adds a line for every topic it
+places. You can read it; leave it in place.
+
+## Pictures
+
+Google fetches every picture from a web address. The scripts
+take the screenshot on this machine, upload it to the deck's
+Drive folder for a few seconds with link sharing on, insert
+it, then delete the upload. The picture stays in the deck
+because Slides keeps its own copy. Nothing has to be pushed
+to GitHub.
+
+TrueUp puts a Cloudflare check in front of automated
+browsers. When the check is there, Step 7 keeps the old
+picture instead of inserting the "security verification"
+page. Replace that picture by hand if it matters.
+
+## Before you present
+
+    python3 g8_preflight.py
+
+It changes nothing and lists what still wants a look: script
+boxes you have not filled yet, placeholders still showing, a
+contents list that no longer matches the slides, boxes whose
+text probably overflows, topics without a picture, and
+benchmarks more than a week old. "Ready to present." means
+the list is empty.
+
+## Finding a deck
+
+Each deck is tagged with its date in Drive. You can rename it
+or move it to another folder and every step still finds it.
+**A copy you make of the whole deck is invisible to the
+scripts**, because they are only allowed to see files they
+created. Keep working in the deck Step 1 made.
 
 ## When something goes wrong
 
 | Message | What to do |
 |---|---|
-| `ERROR in ...: line 47` | A grammar mistake on that line. Nothing was written and the old PPTX is untouched. Fix the line |
-| Every image reported missing | Run `s1_fetch_images.py` then `s2_clean_images.py`. If you ran the build from another directory, that is fine now: paths follow the `.md` file |
-| Benchmarks slide is empty | Run `python3 leaderboard.py` |
-| `was not produced by this script` | The output name belongs to a hand-made deck. Use the `-generated.pptx` name, which is the default |
-| `Orphan (no raw source)` | A file in `images/` with nothing behind it in `images_raw/`. Harmless. Delete it when you are sure |
-| ImageMagick not found | `brew install imagemagick` |
-| Screenshots all fail | Google Chrome is missing from `/Applications` |
-| Slides pictures come out blank | `work/images/` is not on GitHub yet. Commit and push, then run `s4_push_slides.py` again |
-| `credentials/token.json not found` | Run `python3 g_auth.py <FOLDER_ID>` once |
-| `The object ID ... should be unique` | Two slides got the same id. Only happens if you edit the id prefixes in `s4_push_slides.py` |
+| `no deck for 2026-09-18` | Run `python3 g1_new_deck.py 2026-09-18` |
+| `A deck for ... already exists` | Step 1 never replaces a deck. Open the link it prints |
+| `the deck kept changing` | You were typing while it wrote. Nothing was half-written; run it again |
+| `left alone (filled by you)` | Working as intended. Clear the fill if you want the script to update it |
+| `slide ... is parked` | The slide is past the separator. Move it back to update it |
+| `credentials/token.json not found` | Run `python3 g_auth.py <FOLDER_ID>` |
+| Picture unchanged after a run | The page was unreachable or behind a bot check. The log names it |
 
-## The files here
+## How the directory is organised
 
-| File | What it is |
-|---|---|
-| `ADD.md` | The design document |
-| `YYYY-MM-DD-AI-News.md` | One week's deck, the source of truth |
-| `YYYY-MM-DD-AI-News-generated.pptx` | Built output, disposable |
-| `YYYY-MM-DD-AI-News-deleted.md` | Topics you threw out, never recreated |
-| `deck_parser.py` | Reads the Markdown grammar |
-| `deck_layout.py` | Decides every slide, size, and rectangle |
-| `s1_fetch_images.py` | Downloads and screenshots pictures |
-| `s2_clean_images.py` | Normalizes them |
-| `s3_make_pptx.py` | Builds the PPTX |
-| `pptx_text.py` | The palette, fonts, and text boxes |
-| `s4_push_slides.py` | Builds the same deck in Google Slides |
-| `slides_api.py` | Slides requests for boxes, text, and art |
-| `topic_ids.py` | Stable object ids, so the script knows its own work |
-| `test_ids.py` | Object id tests. `python3 test_ids.py` |
-| `g_auth.py` | Signs in to Google once, then self-tests |
-| `bench_page.py` | The benchmarks slide |
-| `move_deleted.py` | Sweeps items marked `<!-- deleted -->` into the deleted file |
-| `leaderboard.py` | Arena benchmarks into XLSX and JSON |
-| `test_deck.py` | Grammar tests. `python3 test_deck.py` |
-| `test_layout.py` | Layout tests. `python3 test_layout.py` |
-| `test_runner.py` | Runs the asserts in a test file |
-| `text_metrics.py` | Measures how wide text will be |
-| `images_raw/` | Originals as fetched. Permanent |
-| `images/` | Slide-ready JPEGs. Disposable, rebuilt by `s2` |
-| `resources_raw/` | `leaderboard.json` and other hand-kept data |
+Run everything from `work/`. The commands are the only Python
+files at the top; everything else lives in a directory with
+one job and a `README.md` of its own.
 
-`s1_download_images.py` and `s3_make_pdf.py` are left over
-from an earlier version and can be deleted.
+```
+work/
+  g1_new_deck.py ... g8_preflight.py   the commands you run
+  g_auth.py                            one-time Google sign-in
+  README.md, ADD.md                    this guide, the design
+
+  gslides/      reads and writes the live deck
+  layout/       topics, markup, geometry; no network
+  sources/      leaderboards, downloads, screenshots
+  config/       gslides.json (folder id, URLs),
+                skeleton.json (wording of standing slides)
+  assets/       pictures a new deck starts with
+  data/         generated files: leaderboard.json, xlsx
+  tests/        offline tests and the saved decks they use
+  probes/       tools for checking things against Google
+  credentials/  OAuth client and token, never committed
+```
+
+Dependencies point one way: the commands use `gslides`,
+`gslides` uses `sources` and `layout`, `sources` uses
+`layout`, and `layout` uses nothing.
+
+Tests: `python3 -m tests` runs them all, or
+`python3 -m tests.test_gdeck` runs one file.
+
+`data/images` and `data/images_raw` hold pictures from the
+earlier Markdown decks; nothing reads them. `ADD.md`
+(Appendix E) lists the code that remains from that workflow.

@@ -1,54 +1,53 @@
 # Architecture Design Document: Weekly AI News Deck
 
-Status: Draft (pending approval) - Date: 2026-09-12
+Status: Built and in use · Date: 2026-09-14
 
 ## Executive summary
 
-Every Friday a new `YYYY-MM-DD-AI-News.pptx` has to
-exist, carrying 20 to 40 news items with pictures and
-links. Today that deck is built by hand in PowerPoint, and
-the work that takes the longest is not thinking about the
-news. It is typing, pasting, cropping, dragging boxes
-around, and re-typing the same titles into the table of
-contents.
+Every Friday a seminar deck of about 13 slides has to exist:
+contents, benchmarks, 6 to 10 news topics with pictures and
+links, a few standing pages. Built by hand, most of the
+evening goes on mechanics: typing headlines twice, dragging
+boxes, cropping screenshots, re-checking numbers.
 
-This design keeps one text file as the source of truth for
-a week's deck. A Markdown file holds the titles, the
-bullets, the links, and the names of the images. Four small
-Python scripts sit around it: one downloads or screenshots
-the pictures the file references, one normalizes them, one
-fetches the benchmark numbers, and one builds the PPTX.
+**The Google Slides deck is the single source of truth.**
+Scripts write content into the live deck, and the author
+edits the same deck by hand whenever they like. There is no
+intermediate file to keep in sync. An earlier design kept a
+Markdown file as the truth and generated PPTX from it; it
+was built, then cancelled in favour of working in Slides
+directly.
 
-**The author never lays out a slide.** There are no
-coordinates in the deck file and no way to put one there.
-The generator decides how many slides a section needs,
-which news items share a slide, how big the text is, and
-the exact rectangle for every box and every picture. The
-table of contents is generated from the headings, so it
-cannot drift out of sync with the slides.
+The hard problem is sharing one document between a person
+and a program without either destroying the other's work.
+It is solved with three rules the author can learn in a
+minute: **a script only changes shapes it created, a
+background fill freezes a box, and nothing after the
+separator slide is ever written.** Every rule was measured
+against the real Slides API, and in the browser, before code
+depended on it.
 
-Each piece of news is one headline, a few bullets, and one
-illustrative picture. That uniformity is what makes
-automatic layout possible: the generator is never guessing
-what a slide is supposed to look like.
-
-Measured on the Sept 18 deck: 13 news items across 11
-slides, 12 pictures, all text placed at 12 pt with zero
-overflow, built in 0.34 seconds.
+Measured on the Sept 18 deck: 11-slide skeleton created in
+29 s; 7 news topics with screenshots added in 68 s; each
+refresh step 5 to 12 s; a second run of any step changes
+nothing. 150 tests, all offline.
 
 ## Contents
 
+- [The principles, at a glance](#the-principles-at-a-glance)
 - [The problem](#the-problem)
 - [Non-goals](#non-goals)
-- [The pipeline](#the-pipeline)
-- [The deck file: the one contract](#the-deck-file-the-one-contract)
-- [Protecting what a human wrote](#protecting-what-a-human-wrote)
+- [The architecture](#the-architecture)
+- [Who owns a shape](#who-owns-a-shape)
+- [The deck skeleton](#the-deck-skeleton)
+- [Modules and dependencies](#modules-and-dependencies)
+- [The AI layer](#the-ai-layer)
+- [Lifecycle: what each edit does](#lifecycle-what-each-edit-does)
 - [Automatic layout](#automatic-layout)
-- [The three pages that are not news](#the-three-pages-that-are-not-news)
-- [Slide inventory](#slide-inventory)
-- [Images](#images)
-- [Why the deck is small by construction](#why-the-deck-is-small-by-construction)
-- [The weekly run](#the-weekly-run)
+- [The pages that are not news](#the-pages-that-are-not-news)
+- [Pictures](#pictures)
+- [Writing safely to a live document](#writing-safely-to-a-live-document)
+- [Access and credentials](#access-and-credentials)
 - [Verification](#verification)
 - [Failure handling](#failure-handling)
 - [Known limits and scaling gates](#known-limits-and-scaling-gates)
@@ -56,889 +55,539 @@ overflow, built in 0.34 seconds.
 - [Appendix A: Requirements](#appendix-a-requirements)
 - [Appendix B: Technology choices](#appendix-b-technology-choices)
 - [Appendix C: Risks](#appendix-c-risks)
+- [Appendix D: Measurements behind the design](#appendix-d-measurements-behind-the-design)
+- [Appendix E: Code from the cancelled Markdown design](#appendix-e-code-from-the-cancelled-markdown-design)
+
+## The principles, at a glance
+
+1. **Simplicity.** One document, a few short scripts, no
+   server, no database, no sync file.
+2. **Modularity.** Read model, safe writer, renderer and
+   picture host are separate modules; each step is a thin
+   script on top.
+3. **AI does the judgement, scripts do the writing.** Skills
+   find and phrase content; deterministic scripts place it.
+4. **One system of record.** The live deck. Everything else
+   (screenshots, JSON, the leaderboard cache) is disposable.
+5. **The author owns the deck; scripts are guests.**
+   Ownership is decided by rules Google enforces, not by
+   good behaviour.
+6. **Measure before you depend.** Every API behaviour the
+   rules rely on was probed first.
+7. **Idempotent and order-free.** Any step, any time, any
+   number of times.
+8. **Boring dependencies.** Official Google client, Pillow,
+   ImageMagick, headless Chrome; nothing new to install.
 
 ## The problem
 
-The archive in `2026/` holds 41 decks from this year alone.
-They are good decks. Producing one costs an evening, and
-most of that evening goes on mechanics:
+The archive in `2026/` holds 41 decks from this year. They
+are good decks, and each costs an evening of mechanics:
 
-- The same headline gets typed twice, once on the news
-  slide and once in the table of contents on slide 1. When
-  a story is cut late, slide 1 still lists it.
-- Every text box and every picture is positioned by hand.
-  Slide 14 of the Sept 11 deck has three text boxes and
-  three pictures at six different hand-chosen positions.
-  None of that work carries forward to next week.
-- Images arrive at whatever size and format the source
-  served. Some come in with transparent backgrounds that
-  turn black, some are 4000 px wide, some are 200 px wide
-  and go fuzzy when stretched.
-- There is no text version of a deck. Searching last
-  month's slides means `grep` against `seminar_ppt.txt`, a
-  generated 8 MB text dump.
-- Nothing carries forward. Week 2's deck starts as a copy
-  of week 1's file, and the stale slides have to be found
-  and deleted by hand.
+- The same headline is typed on the news slide and again in
+  the contents on slide 1. When a story is cut late, slide 1
+  still lists it.
+- Every box and picture is positioned by hand, and none of
+  that work carries to next week.
+- Screenshots arrive at any size. Some are 4000 px wide.
+- Standing pages (benchmarks, YouTube counts, layoff
+  numbers) go stale unless someone remembers them.
 
-Constraints that shape the design:
+A generator alone does not fix this, because the author
+still wants the last word: rewording a bullet, dropping a
+story at 11 pm, dragging a slide. So the constraint that
+shapes everything is **the author and the automation must
+work on the same deck, at any time, in any order, and
+neither may undo the other.**
 
-- One person builds this, on a Mac, in a few hours a week.
-- The output must stay PPTX. Five years of archive are in
-  that format, and it is what gets presented.
-- Slides are 16:9 landscape, 10 x 5.625 inches.
-- No network dependency at presentation time.
+Fixed constraints: one person, a Mac, a personal Google
+account; slides 16:9 at 10 x 5.625 in; no access to the rest
+of the author's Drive.
 
 ## Non-goals
 
-The first version deliberately does not do these:
+- It does not choose the news on its own. A skill proposes
+  topics; the author accepts them by filling the box.
+- It does not reproduce the hand-tuned collages of older
+  decks. Every news slide has one shape.
+- It does not export PPTX, PDF or video, and does not publish.
+- It does not see or touch any Drive file it did not create.
+- It does not merge concurrent edits. If the author types
+  while a script writes, the script re-reads and plans
+  again; it never tries to combine the two.
 
-- It does not write the news. Selecting and describing
-  stories is the human's job, assisted by the existing
-  `/ai-news-digest` skill.
-- It does not accept layout instructions. No coordinates,
-  no widths, no slide breaks, no font sizes in the deck
-  file. If a slide looks wrong the fix belongs in
-  `deck_layout.py`, where it fixes every future deck too.
-- It does not reproduce the hand-tuned collages of the
-  older decks. It produces one consistent shape.
-- It does not produce HTML slides, PDF slides, or video.
-- It does not publish anything. Committing to git and
-  uploading to YouTube stay manual.
-
-## The pipeline
-
-Seven modules. Each owns one job and talks to the next only
-through files on disk or a documented function.
+## The architecture
 
 ```
- /ai-news-digest skill
-        |
-        v
- data/ai_news_<from>_to_<to>.md      (ranked pool of events)
-        |
-        |  human curates and writes prose
-        v
- work/YYYY-MM-DD-AI-News.md       <== SOURCE OF TRUTH
-        |
-        +--> s1_fetch_images.py --> images_raw/
-        |         (download or screenshot)   |
-        |                          s2_clean_images.py
-        |                                    v
-        |                                images/
-        |
-        |    leaderboard.py --> resources_raw/leaderboard.json
-        |                                    |
-        +--> s3_make_pptx.py <---------------+
-                  |
-                  |  deck_parser.py   grammar  -> data
-                  |  deck_layout.py   data     -> rectangles
-                  v
-      work/YYYY-MM-DD-AI-News-generated.pptx
-                  |
-             copy to 2026/
+  skills (Claude)                 scripts (Python)            Google
+  ---------------                 ----------------            ------
+  gslides-add-news   --news.json-->  g2_add_news  ---+
+  gslides-update-*   --json------->  g3 .. g7     ---+--> Slides API --> live deck
+                                     g1_new_deck  ---+                    ^
+                                     g8_preflight (read only)             |
+                                                                     author edits
+                     screenshots --> sources/pictures --> gslides/host --> picture copy
 ```
 
-Module ownership, public API, and allowed dependencies:
+Two kinds of worker, one document:
 
-| Module | Owns | Public API | Depends on |
+- **Skills** need judgement: read newsletters, pick stories,
+  read numbers off a web page, write bullets. Their output
+  is a small JSON file.
+- **Scripts** are deterministic. They read the deck, decide
+  what they may change, and send one batch per slide.
+
+There is no local copy of the deck. Each run starts by
+reading the live presentation, so a change the author made a
+second ago is already part of the plan.
+
+## Who owns a shape
+
+The rules are the contract between author and automation.
+
+**1. The object id decides ownership.** Scripts give every
+slide and shape an id starting with `s-` (slides and page
+furniture) or `t-` (topics). Anything else belongs to the
+author. This holds because Slides enforces unique ids across
+a presentation: a box the author copies or cut-and-pastes
+gets a new id (`g3fb561739ea_0_0` in the browser), so it
+stops being the script's the moment it lands.
+
+An earlier idea stamped a topic key into alt text. Probing
+showed duplication copies alt text verbatim, so three boxes
+claimed one topic. Object ids cannot be copied, which is why
+they won.
+
+**2. A fill freezes a box.** Scripts draw text boxes with a
+red border and no background. Any fill, any colour, means
+the author accepted it, and no script changes that box or
+its picture again. The check reads
+`shapeBackgroundFill.propertyState`; an unfilled box reports
+`NOT_RENDERED` but still carries a white colour, so comparing
+colours would be wrong.
+
+**3. The separator is a wall.** Nothing after the slide `Not
+in the presentation` is ever written. Parked topics live
+there.
+
+A script may change a shape only when all three hold: id
+starts with `s-` or `t-`, no fill, before the separator. A
+picture `t-...-p` follows its text box `t-...-b`.
+
+Ids are built from the topic's own words, so they survive
+reordering and editing:
+
+    t-meta-ships-muse-agent-with-its-a345-b
+    t = ours, slug = first 32 characters of the headline,
+    a345 = hash of the full headline, b = text box (p picture)
+
+Fixed pages have fixed ids without a hash (`s-bench`,
+`t-trueup`), and every generated id ends in one, so the two
+families cannot collide. Slides requires 5 to 50 characters
+of letters, digits, `_` and `-`; `gslides/ids.py` enforces it.
+
+## The deck skeleton
+
+`g1_new_deck.py` creates this for a date:
+
+| # | Slide id | Content at creation | Kept current by |
 |---|---|---|---|
-| `ai-news-digest` (skill) | `data/ai_news_*.md` | the digest file | mail folder |
-| deck file (human-authored) | slide content and order | the grammar below | nothing |
-| `deck_parser.py` | the grammar | `parse_deck`, `image_manifest`, `all_headlines` | nothing |
-| `text_metrics.py` | measuring text | `text_width`, `wrap_lines` | Pillow |
-| `deck_layout.py` | all geometry | `paginate(sections)` | `deck_parser`, `text_metrics` |
-| `pptx_text.py` | the palette and text boxes | `add_textbox`, `style_run` | python-pptx |
-| `bench_page.py` | the benchmarks slide | `render_benchmarks_page` | `deck_layout`, `pptx_text` |
-| `s1_fetch_images.py` | `images_raw/` | reads deck file, writes raw files | `deck_parser`, network, Chrome |
-| `s2_clean_images.py` | `images/` | reads `images_raw/`, writes `images/` | ImageMagick |
-| `leaderboard.py` | benchmark data | XLSX + `leaderboard.json` | network, openpyxl |
-| `s3_make_pptx.py` | the `.pptx` | reads deck file, images, JSON | all of the above |
-| `move_deleted.py` | moving flagged items to the sidecar | the deck file and its sidecar | `deck_parser` |
+| 1 | `s-toc` | title, contents placeholder, epigraph placeholder | g3 |
+| 2 | `s-bench` | legend, cutoff note, two columns | g4 |
+| 3 | `s-aa-index` | text box, picture | g5 |
+| 4 | `s-news-1` | "AI News", one placeholder box | g2 |
+| 5 | `s-youtube` | promo text, channel picture | g6 |
+| 6 | `s-news-2` | "AI News", one placeholder box | g2 |
+| 7 | `s-layoffs` | Layoffs.fyi and TrueUp topics | g7 |
+| 8 | `s-about` | portrait and bio | fixed |
+| 9 | `s-thanks` | links | fixed |
+| 10 | `s-separator` | divider note; topic ledger in speaker notes | never |
+| 11 | `s-parked` | empty, for rejected topics | never |
 
-Dependencies run one way. `deck_parser` imports nothing of
-ours. `deck_layout` imports only `deck_parser`, and knows
-nothing about PowerPoint. `s3_make_pptx` is the only module
-that touches python-pptx, and it is the composition root:
-it reads the files, calls the two pure modules, and writes
-the result.
+The wording of pages 3, 5, 7, 8 and 9 lives in
+`config/skeleton.json`, the one place that text is kept.
 
-That split is the reason the layout arithmetic can be
-tested at all. `deck_layout` returns numbers, so a test can
-assert that no rectangle leaves the slide without opening a
-PPTX or looking at a picture.
+The file is named `YYYY-MM-DD-AI-News` and tagged with
+`seminarDate` in Drive `appProperties`. Steps find the deck by
+that tag, so renaming or moving it breaks nothing. Step 1
+refuses to create a second deck for a date.
 
-Why separate scripts rather than one program with
-subcommands: the stages fail for different reasons and get
-re-run at different times. Screenshots fail because a site
-is slow. The renderer fails because a heading is
-malformed. Separating them means a renderer fix does not
-re-shoot 11 web pages.
+## Modules and dependencies
 
-## The deck file: the one contract
+Three packages, each with one job and a `README.md` stating
+its modules, public API and dependencies:
 
-This is the heart of the design. Everything else reads or
-writes it.
-
-The grammar is seven rules:
-
-1. `#` at the top is the deck title. It also fills the
-   heading of the contents slide.
-2. `## slide: <title>` starts a section with that title.
-3. `### <headline>` starts a news item inside the current
-   section. A bare `###` starts one with no heading, for a
-   block that is only bullets.
-4. An image line directly under a `###` is that item's
-   picture, optionally followed by a manifest comment.
-5. `-` bullets are body lines. A bullet holding only a URL
-   renders as a small blue clickable link.
-6. `<!-- locked -->`, `<!-- notoc -->`, `<!-- profile -->`
-   and `<!-- closing -->` mark what a human has claimed,
-   what stays off the contents, and which two slides have
-   their own shape. Deletion moves an item to a sidecar
-   file. See
-   [Protecting what a human wrote](#protecting-what-a-human-wrote).
-
-Note what rule 2 does **not** say. A section is not a
-slide. It is a group of news items that share a title, and
-the generator turns it into as many slides as the text
-needs. Writing seven items under one `## slide:` heading is
-normal and correct.
-
-Two section names are reserved and generate their own
-content: `## slide: toc` and `## slide: benchmarks`.
-
-Inside a bullet, `**bold**` and `==highlight==` work. The
-highlight is the pale yellow used throughout the existing
-decks.
-
-Example:
-
-```markdown
-# AI News - Sept 18, 2026
-
-## slide: toc
-
-## slide: benchmarks
-
-## slide: AI News
-
-### Meta ships Muse agent with its own cloud computer
-![](images/meta-muse.jpg)
-<!-- shot: https://about.fb.com/news/ -->
-- Handles email, calendars, Instagram and websites
-- **Keeps working after you close it**
-- Tiers: Free, $20/mo, $100/mo
-
-### Claude formalized Fermat's Last Theorem in 11 days
-![](images/fermat-lean.jpg)
-<!-- shot: https://www.anthropic.com/research/... -->
-- Converted the 1995 proof into ==13 Mln lines of Lean==
-- https://www.anthropic.com/research/...
-```
-
-### Protecting what a human wrote
-
-The deck file is edited by two parties: the author, and an
-assistant running the `slides-update` skill. The author
-makes three kinds of edit, and two markers record the two
-that need defending.
-
-| Human did | How it is recorded | Effect |
+| Package | Job | Depends on |
 |---|---|---|
-| added a topic | it is simply there | nothing may remove it |
-| updated a topic | `<!-- locked -->` | no character of it may change |
-| deleted a topic | moved to a sidecar file | no slide, and the topic may never return |
+| `layout/` | content model, inline markup, topic matching, geometry, text measurement, benchmark page sizes; pure | nothing |
+| `sources/` | outside content on this machine: leaderboards, downloads, screenshots, ImageMagick | `layout` |
+| `gslides/` | the live deck: read model, ownership rules, rendering, safe writes, picture hosting | `layout`, `sources` |
 
-A `locked` marker on its own line under a `###` covers that
-news item. Directly under a `## slide:` heading it covers
-the whole section, which is how the author page and the
-thank you page are protected from the moment a deck is
-created.
+The `g1` to `g8` commands sit above all three as thin
+composition roots, one per step. Around them: `config/`
+(settings and the standing slides' wording), `assets/`
+(starter pictures), `data/` (generated leaderboard files),
+`tests/` and `probes/`.
 
-Deletion is the interesting one, because a lock cannot
-defend something that is not there. If a story is cut by
-removing its lines, the next pass reads the deck, finds the
-story missing, finds it again in the news digest, and
-helpfully puts it back. The record of the decision has to
-live somewhere.
+Inside `gslides/`:
 
-It lives in a sidecar file named after the deck:
-
-    2026-09-18-AI-News.md            the deck
-    2026-09-18-AI-News-deleted.md    topics thrown out
-
-The item's `###` heading is the record. There are two ways
-to get it into that file, because the two suit different
-moments, and both end in the same state:
-
-- **By hand.** Cut the item out of the deck and paste it in.
-  One motion, best for a single item while already editing.
-- **Mark and sweep.** Put `<!-- deleted -->` under the item
-  and run `move_deleted.py`, which cuts every marked item
-  across, stamps it with the date, and drops the marker. Best
-  when several go at once, because the author never leaves
-  the deck file or loses their place.
-
-The second exists because marking is the cheaper gesture
-while reading, and a person dropping five stories should not
-have to do five cut-and-pastes. The script is the only thing
-allowed to remove lines from a deck, and it never destroys
-them: text moves verbatim, the previous deck is kept as
-`<deck>.bak`, and it refuses to touch a deck that does not
-parse. `--dry-run` prints the plan and writes nothing.
-
-The marker also works on a `## slide:` heading, moving that
-section and all its items together.
-
-Matching is on the topic, not the string. Exact comparison
-looked adequate and is not: a regenerated deck almost never
-reproduces a headline word for word, so "The music industry
-stops fighting" would sail past a ban on "The music
-industry stops fighting and starts licensing". So
-`same_topic` treats headlines as one topic when they are
-equal after folding case and space, when one contains the
-other, or when they share 70% of their significant words.
-Two different stories about the same company stay distinct.
-
-Enforcement is not a promise. `check_preserved.py` compares
-the deck before and after an editing pass and exits
-non-zero on `CHANGED`, `REMOVED`, `RECREATED`, or
-`RESURRECTED`. Items are matched by heading text rather
-than position, so inserting a story in the middle is not
-mistaken for a rewrite. The tool implements its own
-splitting of the file rather than importing `deck_parser`,
-because a checker that shares code with the thing it checks
-shares its bugs. That deliberate duplication now includes
-`same_topic`, so a test asserts the two copies agree on a
-table of real headlines and cannot drift apart.
-
-The build is the second net. Someone editing by hand at
-11:55 will not run the checker, so `s3_make_pptx.py` reads
-the sidecar too, reports how many topics are in it, and
-warns loudly, naming both headlines, if one is back on a
-slide. It warns rather than refuses, because the author may
-have deliberately changed their mind, and a build minutes
-before a talk should not be blocked by a heuristic.
-
-One limit, stated plainly rather than papered over: an edit
-the author makes without adding a marker is
-indistinguishable from text the assistant wrote, so nothing
-can protect it. The skill is required to say so in its
-report instead of implying a guarantee it does not have.
-
-### Image sources
-
-The comment under an image is the download manifest, and it
-has three forms:
-
-| Comment | Meaning |
+| Module | Owns |
 |---|---|
-| `<!-- src: URL -->` | download that picture |
-| `<!-- shot: URL -->` | screenshot that web page |
-| none | a local original, checked but never fetched |
+| `deck.py` | Read model: Deck, Slide, Shape; `owned`, `frozen`, `editable`, `main`, `parked`, `room_below`; date and name rules; deck lookup |
+| `write.py` | Safe writing: revision check, `guard`, `refresh_text`, `refresh_picture`, `refresh_topic`, `replace_line`, `replace_owned`, `run_plan` |
+| `render.py` | Content to requests: text styling, boxes, pictures, contents columns, benchmark columns; Slides padding compensation |
+| `api.py` | Individual Slides request dictionaries |
+| `ids.py` | Id scheme, fixed ids, ownership prefix |
+| `host.py` | Short-lived public picture URLs on Drive |
+| `client.py` | Sign-in, `config/gslides.json`, project paths |
+| `step.py` | Arguments, deck lookup and picture hosting shared by steps |
 
-The manifest lives next to the picture it describes, so
-there is no second list to fall out of date with the deck.
+Dependencies never point back up, and `sources` holding the
+local picture work while `gslides/host.py` holds the Drive
+upload is what keeps it that way. Only `client`, `read_deck`,
+`write.apply` and `host` talk to Google; everything that
+decides *what* to write is a pure function from a Deck to a
+list of requests, which is what makes it testable offline.
 
-Two properties this buys, both worth the small amount of
-convention. The deck is greppable, diffable, and
-reviewable in git, so a week's changes show up as a normal
-text diff. And content is fully separated from
-presentation, which is what allows the layout to be
-someone else's problem.
+Code rules, checked on every file: under 800 lines,
+functions under 35 lines, lines under 65 characters, a
+docstring on every module, function and class.
+
+## The AI layer
+
+| Agent | Knowledge base | Memory | Tools | Never decides alone |
+|---|---|---|---|---|
+| `gslides-add-news` | `ai-news-digest` over the author's newsletters; web pages it cites | the deck itself and the topic ledger (`g2_add_news.py --list`) | `g1`, `g2`, `g3` | whether a topic is in the talk: the author fills or parks it |
+| `gslides-update-toc` | the current slides | none | `g3` | the epigraph once written |
+| `gslides-update-benchmarks` | LM Arena via `sources/leaderboard.py` | none | `g4` | overriding a filled column |
+| `gslides-update-aa-index` | the Artificial Analysis page | none | `g5` | overriding a filled box |
+| `gslides-update-youtube` | the channel page | none | `g6` | wording beyond the counts line |
+| `gslides-update-layoffs` | layoffs.fyi, TrueUp | none | `g7` | overriding a filled topic |
+
+Agents never edit the deck directly. They reach it only
+through the step scripts, so every write passes the same
+ownership guard. The agent's memory of "what was already
+added" is not in the agent: it is the ledger in the deck,
+visible to the author and erasable by deleting lines from
+the separator's speaker notes.
+
+## Lifecycle: what each edit does
+
+| The author... | Scripts then... |
+|---|---|
+| fills a box | never change it or its picture |
+| types in an unfilled script box | may overwrite it on the next refresh; filling protects it |
+| adds a box or slide | never touch it |
+| copies or cut-pastes a script box | treat the pasted box as the author's |
+| moves or resizes a script box | keep position and width; height follows new text, growing only into free space |
+| reorders slides | follow the new order: contents list it; new news goes before layoffs wherever it is |
+| parks a topic past the separator | never add it again, even reworded |
+| deletes a topic outright | never add it again: the ledger remembers it |
+| fills one contents column | leave the whole contents alone |
+| writes the epigraph | keep it |
+| deletes or parks a fixed slide | that step reports it and writes nothing |
+| copies the whole deck | cannot see the copy (see Access) |
+
+**How "never add again" works.** Before adding, `g2`
+compares each candidate headline with the first line of
+every text box in the deck, parked section included, and
+with every headline in the ledger. Matching is on the topic,
+not the wording (`same_topic`: equal after normalising, one
+containing the other, or 70% of significant words shared).
+Probed with reworded headlines for a parked topic and for a
+deleted slide; both were skipped.
+
+**Where new topics go.** First onto `s-news-1` and
+`s-news-2` while each still holds only its placeholder and
+nobody has put anything else on it; then as new slides just
+before `s-layoffs`, at its position at that moment.
 
 ## Automatic layout
 
-`deck_layout.py` turns sections into placed rectangles. It
-runs in four steps.
+`layout/deck_layout.py` turns a list of topics into placed
+rectangles; the author never positions anything.
 
-**1. Estimate.** For each news item, predict its rendered
-height from its character count and its column width. A
-glyph of Calibri at size S is about `0.50 * S` points wide
-for body text and `0.56 * S` for a bold headline, so the
-number of wrapped lines follows from the box width, and the
-height follows from a line spacing of `1.24 * S`. Those
-three constants were measured from the existing decks and
-live at the top of the module.
+1. **Estimate** each topic's height from measured text
+   widths (`layout/text_metrics.py`: Arial metrics scaled by 0.9148
+   to Calibri, fitted on 12 observed line breaks).
+2. **Pack** topics onto a slide while they fit and fewer than
+   three share it.
+3. **One font size per slide**, trying 12, 11, 10, 9, 8 pt.
+4. **Distribute** leftover height as equal gaps, capped at
+   0.40 in; the rest goes to pictures.
 
-**2. Pack.** Walk the section's items and keep adding them
-to the current slide while they still fit the content band
-and the slide holds fewer than three. Otherwise start a new
-slide. Continuation slides repeat the section title, which
-is why the old decks have several slides all called "AI
-Updates" and the new ones do too.
+Geometry (inches): slide 10 x 5.625, margin 0.09, content
+band 0.46 to 5.53, text column 6.10 beside a 3.60 picture
+column. Titles Calibri 20 bold; headlines red bold; bullets
+Calibri 12 with a red dot and hanging indent; code Consolas 9
+blue; links 9 pt blue.
 
-**3. Choose one font size per slide.** Try 12, 11, 10, 9,
-then 8 pt, and take the first that fits. Every item on a
-slide shares the chosen size so the page looks deliberate
-rather than patched. An item too tall to share a slide gets
-one to itself, stepped down the same ladder.
+**Slides-specific corrections**, all measured:
 
-**4. Distribute the slack.** Whatever vertical space is
-left over is shared equally between the items on the
-slide, so pages are never top-heavy with a gap at the
-bottom.
+- Slides pads text 0.10 in left and right and 0.05 in top
+  and bottom, and the API cannot change it. Every box is
+  grown by the difference and shifted out by half of it, so
+  text lands where the layout planned.
+- A benchmark column gets 0.06 in of slack, because a URL of
+  slashes and dots measures a little short.
+- When a script rewrites an existing box, its height is set
+  to its new text within the free space below it, instead of
+  shrinking the font inside the old height.
 
-The geometry, in inches, measured from the existing decks:
+## The pages that are not news
 
-```python
-SLIDE_W, SLIDE_H = 10.00, 5.625
-MARGIN      = 0.09
-TITLE_H     = 0.36      # title bar, 20 pt bold
-BAND_TOP    = 0.46      # content starts here
-BAND_BOT    = 5.53
-CONTENT_W   = 9.82
-IMG_W       = 3.60      # picture column
-TEXT_W_IMG  = 6.10      # text beside a picture
-TEXT_W_FULL = 9.82      # text with no picture
-MAX_BLOCKS  = 3
-FONT_LADDER = [12, 11, 10, 9, 8]
-```
+**Benchmarks: parsed data, not a screenshot.**
+`sources/leaderboard.py` writes the top 25 of the Arena English and
+Coding boards to `data/leaderboard.json`, with each
+model's score, vendor and the board's vote cutoff. The page
+is two text columns, `marker score name`, vendor-coloured,
+at 9 pt, centred, with a legend and a "Votes counted through"
+note. Text beats a picture of numbers: crisp on a projector,
+searchable, nothing to crop. It is plain paragraphs, not a
+table, because an earlier PPTX table could not be made short
+enough. `g4` rebuilds only when the cutoff changes.
 
-Each news item gets text on the left and its picture fitted
-into a 3.60 inch column on the right, centered in its box
-with the aspect ratio preserved. An item with no picture
-gets the full slide width for its text, which is what
-happens automatically when an image file is missing.
+**Intelligence Index: a screenshot**, because it is a live
+chart. `g5` retakes it; bullets change only when a skill
+supplies them.
 
-Typography, also measured from the existing decks:
+**YouTube: one line.** `g6` reads subscriber and video counts
+from the channel page and replaces only the line containing
+`subscribers`, so the rest of the promo wording is the
+author's.
 
-| Element | Font | Size | Weight |
-|---|---|---|---|
-| Slide title | Calibri | 20 pt | bold |
-| Item headline | Calibri | size + 1 | bold, red |
-| Body bullet | Calibri | 12 pt, down to 8 | normal |
-| Code run | Consolas | 9 pt | normal, blue |
-| Red emphasis | Calibri | body size | bold, red |
-| Link line | Calibri | 9 pt | normal, blue |
+**Layoffs: two independent topics.** `g7` refreshes the
+Layoffs.fyi and TrueUp boxes separately, so freezing one
+does not block the other.
 
-News slides use 12 pt and step down only when text will not
-fit. The two pages that hold a single short block, the
-author page and the sign-off, may go above it; nothing else
-may.
+## Pictures
 
-Code is marked with backticks and set in Consolas, which
-ships with Microsoft Office. The hand-made decks used
-Victor Mono at the same 9 pt and the same blue, but that is
-a Google Slides web font: it is not installed locally, so
-PowerPoint would substitute something proportional and the
-alignment that makes code readable would be lost.
+Slides accepts a picture only as a URL it fetches itself.
+`sources/pictures.py` does it in three stages, in a temp directory:
 
-Every content box carries the pale yellow fill `FFF2CC` and
-a 0.75 pt red border `FF0000`, both lifted from the
-hand-made decks. The slide title is left unfilled and
-unbordered, as it is there.
+1. **Fetch**: download (`src`) or screenshot with headless
+   Chrome at 1600 x 1000 (`shot`).
+2. **Clean** with ImageMagick: flatten on white, sRGB, trim
+   2% border, fit the picture box at 150 ppi, JPEG q85.
+3. **Host**: upload to the deck's folder, share by link, give
+   Slides the `uc?export=download` URL, then delete the upload.
 
-A bordered box has to fit its text, because a border makes
-sloppiness visible in a way an invisible box never did. So
-the text rectangle is the estimated height of its own text,
-not the whole row: the border hugs the words. The picture
-still gets the full row, which keeps it as large as the
-slide can afford. Each box also carries `spAutoFit`, so
-PowerPoint settles the last fraction of an inch against the
-real text and corrects any small error in the estimate.
+Slides copies the picture into the presentation at insert
+time. Probed: the picture stayed after the upload was
+unshared and deleted. So nothing is pushed to GitHub and no
+public file outlives the run.
 
-The font ladder is what makes overflow a solved problem
-rather than a warning the human has to act on. A build
-still reports any slide whose text misses the band even at
-8 pt, because silence about clipped text would be worse,
-but that is a safety net and not part of the normal
-workflow. On the Sept 18 deck it never fired: all 11 slides
-landed at 12 pt.
+Before screenshotting, `sources/pictures.challenged()` fetches the page
+and looks for a bot wall. TrueUp answers with a Cloudflare
+challenge (HTTP 403), so its old picture is kept instead of a
+"security verification" screen.
 
-## The three pages that are not news
+## Writing safely to a live document
 
-Three pages recur every week and none of them is a news
-item. They are worth writing down because they are the
-pages a naive design leaves as manual work.
+Four layers, outermost first:
 
-**Benchmarks: generated from data, not a screenshot.**
-`leaderboard.py` already fetches the Arena leaderboards and
-writes two XLSX files. It now also writes
-`resources_raw/leaderboard.json`, holding the top 25 of
-each board with each model's name, score, vendor, and page
-URL. `## slide: benchmarks` turns that JSON into two plain
-columns, 25 models each, written as `marker score name`
-with the marker coloured by vendor and a legend across the
-top.
+1. **Planning helpers** return nothing for a shape that is
+   not editable.
+2. **`guard`** drops any request aimed at an existing shape
+   or slide the rules protect, even if a planner let it
+   through, and logs what it dropped.
+3. **Revision check.** Every batch carries the revision id
+   the plan was made from. If the author typed in between,
+   Slides refuses with HTTP 400 ("does not match the latest
+   revision"). `run_plan` re-reads the deck and plans once
+   more, then stops and says so.
+4. **Geometry.** Rewrites keep a box's position and width;
+   pictures use `replaceImage`, which keeps the frame.
 
-The page runs at 9 pt rather than the deck's 12, because it
-carries 50 lines of data and nothing else. The two columns
-sit together in the middle of the slide, each sized to its
-own longest line and its own row count, so neither the
-width nor the height carries slack.
+Scripts hold no state between runs. Everything they need is
+re-read from the deck, so an interrupted run leaves either
+whole batches or none, and the next run finishes the job.
 
-The page also states what the numbers are current to.
-Arena publishes a `voteCutoffISOString` beside the
-entries, and that, not the day we downloaded the file, is
-what the board reflects: on Sept 12 the boards were still
-counted through Sept 11. `leaderboard.py` stores it per
-board, so if the two ever diverge the page says so instead
-of printing one date over both. It reads at the normal 12 pt
-in an ordinary yellow box on the header row beside the
-legend, which is also what keeps the columns clear of it:
-they start below the whole header, not beside it.
+## Access and credentials
 
-Parsed data beats a screenshot here for three reasons worth
-the extra code. The text stays crisp at any projector
-resolution. The numbers are real text, so they can be
-edited or searched. And nothing has to be re-cropped by
-hand each week. `leaderboard.py` owns the vendor
-classification rules, so the renderer never repeats them.
+OAuth for the author's own Google account, project
+`jarvis-lev`, desktop client. Scopes: `drive.file`,
+`presentations`, `documents`. `drive.file` means the app can
+see only files it created: probed, it listed exactly its own
+files and nothing else in the Drive. Consequences, all
+measured:
 
-This page was a real PPTX table first, and that was wrong.
-PowerPoint enforces a minimum row height that it applies
-regardless of what the file asks for, so 25 rows always
-spilled off the bottom of the slide no matter what height
-python-pptx wrote. Ordinary paragraphs have no such floor:
-line spacing can be set exactly, the font size is computed
-from the space available, and the vendor swatch becomes a
-coloured character instead of a filled cell. The result
-fits by arithmetic rather than by hope, and the column
-order puts the score before the name so the ranking reads
-down the page.
+- rename and move keep access (same file id)
+- a copy the author makes is invisible to the scripts
+- creating inside an existing folder works, given its id
 
-**Intelligence Index: a screenshot, because it is a live
-page.** The Artificial Analysis index is a web page with an
-interactive chart, not a data file worth reverse
-engineering for one picture a week. So it is an ordinary
-news item whose image carries a `shot:` comment, and
-headless Chrome captures it. Nothing about it is a special
-case in the renderer.
-
-**Jobs and layoffs: two screenshots, same mechanism.**
-`layoffs.fyi` and `trueup.io/layoffs` are both `shot:`
-entries. The headline numbers go in the bullets, where they
-are greppable and easy to update, and the tracker page
-itself provides the illustration.
-
-The division of labour generalizes. When a source publishes
-numbers we can parse, render them as a table and keep the
-data. When it publishes a page, photograph the page. The
-`shot:` mechanism means the second case costs one line in
-the deck file.
-
-## Slide inventory
-
-The skeleton of a typical week. Slide numbers are
-approximate because the generator decides them.
-
-| Slide | Content | How it is produced |
-|---|---|---|
-| 1 | Table of contents | generated from every `###` heading |
-| 2 | LM Arena benchmarks | generated from `leaderboard.json` |
-| 3 | Intelligence Index | `shot:` screenshot |
-| 4-9 | Top news | deck file, auto-paginated |
-| 10 | YouTube channel | `shot:` of the channel page |
-| 11-23 | More news | deck file, auto-paginated |
-| 24 | Jobs and layoffs | two `shot:` screenshots |
-| 25 | About the speaker | deck file, local photo |
-| 26 | Thank you | deck file |
-
-The important observation: apart from the contents page and
-the benchmark page, every slide is the same thing. A title,
-then one to three items, each an headline with bullets and
-a picture. The author page, the YouTube page, and the thank
-you page are not special cases in code. They are ordinary
-news items whose text happens not to change much. That is
-what keeps the renderer small and the layout uniform.
-
-The sections whose text is stable week to week can be kept
-in a template file and copied forward, so the author page
-does not get retyped 52 times a year.
-
-## Images
-
-Two directories, because a fetched file and a
-presentation-ready file are different things.
-
-`images_raw/` holds exactly what the network returned,
-whether downloaded or screenshotted. Never edited. This is
-the "do the expensive work once" boundary: shooting 11 web
-pages takes about 40 seconds and can fail because a page
-moved, so once a file lands it stays.
-
-`images/` holds normalized copies, and is disposable. It
-can be deleted and rebuilt from `images_raw/` in about a
-second.
-
-The normalization standard:
-
-| Property | Value | Why |
-|---|---|---|
-| Format | JPEG, sRGB, quality 85 | PPTX embeds it directly |
-| Background | white, alpha flattened | transparent PNGs render black |
-| Size | fits the slide's picture box at 150 ppi | see below |
-| Aspect ratio | preserved, never padded | see below |
-| Trim | 2% fuzz border trim | strips screenshot whitespace |
-| Marker | comment `seminar-150ppi-q85` | idempotent, and records the settings |
-
-### Why the deck is small by construction
-
-A PPTX is its pictures. On a representative deck they are
-86% of the bytes, and everything else together is under 40
-KB. So deck size is an image question, and it is settled
-here rather than afterwards.
-
-The old manual fix was to open the finished file in
-PowerPoint and run Compress Pictures at "email (96 ppi)",
-taking 20 to 30 MB down to about 2 MB. That is a repair,
-performed on a file that should never have been that large,
-and it is one forgotten click away from shipping 30 MB.
-
-The generator knows exactly how big a picture can ever
-appear, because it decides the layout: at most 3.60 by 5.07
-inches. At 150 ppi that is 540 by 760 pixels, and any pixel
-beyond it cannot be displayed. So `s2_clean_images.py`
-imports the box from `deck_layout` and scales to fit it. The
-two numbers cannot drift apart, and a test asserts they
-match.
-
-"Delete cropped areas" has no equivalent because nothing is
-ever cropped in the PPTX. Trimming happens in ImageMagick
-before the picture is placed, so there is no hidden margin
-to discard.
-
-Measured on the Sept 18 deck, 11 pictures:
-
-| Setting | Deck |
-|---|---|
-| unbounded, longest side 1600 px | 1336 KB |
-| `--ppi 220`, PowerPoint's "print" | 591 KB |
-| `--ppi 150`, the default | 338 KB |
-| `--ppi 96`, PowerPoint's "email" | 190 KB |
-
-150 ppi is the default because it is four times smaller than
-storing 1600 px and still sharper than the 96 ppi the decks
-shipped at for years. The resolution is a flag, not a
-rewrite, and it is recorded in each file's marker so
-changing it rebuilds everything without `--force`.
-
-The scaling gate: if a deck ever passes 8 MB, the build says
-so and names the command to shrink it.
-
-Aspect ratio is the one place the earlier design was wrong.
-`s2_clean_images.py` used to pad every picture onto a fixed
-800x600 white canvas. That is right for Markdown, which
-cannot resize a picture, and wrong for slides: the white
-bars get baked into the file and then the renderer adds
-more of its own. The renderer fits pictures into their box
-at placement time, so the job here is only to make them
-clean and a sensible size.
-
-Because `images_raw/` is permanent, `s2` needs no backup of
-its own. The old version copied the whole directory to
-`~/backups` before editing pictures in place, and that
-machinery is gone. Removing a component is a win.
-
-## The weekly run
-
-```bash
-cd work
-
-# 1. build the ranked pool of events (existing skill)
-#    -> data/ai_news_<from>_to_<to>.md
-
-# 2. human writes 2026-09-18-AI-News.md
-
-# 3. refresh the benchmark numbers
-python3 leaderboard.py
-
-# 4. fetch and normalize pictures
-python3 s1_fetch_images.py 2026-09-18-AI-News.md
-python3 s2_clean_images.py
-
-# 5. build the deck
-python3 s3_make_pptx.py 2026-09-18-AI-News.md
-
-# 6. read it once, then copy to ../2026/ and commit
-```
-
-### Rebuilding minutes before the seminar
-
-Fixing a typo at 11:55 is the case that has to work
-without thinking, so the rebuild is one command with no
-arguments:
-
-```bash
-python3 s3_make_pptx.py
-```
-
-With no file named it takes the newest `*-AI-News.md` in
-the directory and says which one it picked. It needs no
-network, reads only local files, and finishes in about a
-third of a second. Three details make it safe to run under
-pressure:
-
-- **It writes only `<deck>-generated.pptx`.** The output
-  name is never the same as a hand-made deck's name.
-- **It refuses to overwrite anything it did not write.**
-  Every generated file carries a marker in its core
-  properties, and a target that is neither named
-  `-generated.pptx` nor carries the marker is left alone
-  unless `--force` is given. Five years of hand-made decks
-  sit in this repository; none of them can be clobbered by
-  a mistyped command.
-- **Paths resolve against the Markdown file, not the shell.**
-  Running it from the repository root works exactly the
-  same as running it from `work`. Otherwise every picture
-  would quietly go missing and the deck would still build,
-  which is the worst possible outcome minutes before a
-  talk.
-
-A grammar mistake stops the build with one line naming the
-offending line number, and writes nothing. The previous
-PPTX stays on disk, so a bad edit never leaves the author
-with no deck at all.
-
-Re-running `s1` and `s2` is only needed when a picture was
-added or changed. Text-only edits need step 5 alone.
-
-Step 5 takes under half a second, and steps 4 and 5 are
-free to repeat because they skip finished work. Editing one
-bullet and rebuilding is instant, which is the point: the
-deck stops being a thing you are afraid to touch on
-Thursday night.
-
-Lifecycle, the part that is easy to forget. When a news
-item is cut from the deck file, three things follow. Its
-contents entry disappears and the slides reflow, both
-automatically. Its picture becomes an orphan in `images/`,
-which is not automatic: `s2` reports unreferenced files
-rather than deleting them, because deleting a picture that
-turns out to be needed next week costs more than a line of
-log.
+`credentials/client_secret.json` and `credentials/token.json`
+are gitignored. The folder id and source URLs are in
+`config/gslides.json`, which holds nothing secret.
 
 ## Verification
 
-Small project, so the pyramid is short. It still has every
-layer, because the failure modes differ at each one.
+**Code.** 150 tests, no network:
 
-- **Unit and module.** `test_deck.py` covers the grammar
-  and the layout arithmetic: 34 tests, no dependencies, run
-  with `python3 test_deck.py`. The layout tests are the
-  ones that matter. Since nobody positions anything by
-  hand, a packing bug would push text off a slide silently,
-  so the tests assert directly that no rectangle leaves the
-  content band and none leaves the slide.
-- **Integration.** Build the real deck file and reopen the
-  PPTX: assert the slide count, that no shape crosses a
-  slide edge, and that no text box overlaps a picture.
-- **Conformance.** The project's Python rules are
-  mechanical, so check them mechanically: files under 800
-  lines, functions under 35 lines, lines under 65
-  characters, a docstring on every function and class.
+- `tests/test_gdeck.py`, `tests/test_gwrite.py`, `tests/test_gsteps.py` run on
+  two saved real API responses in `fixtures/`: a fresh
+  skeleton, and a lived-in deck where a human had moved
+  layoffs, added a box, filled boxes, parked and deleted
+  topics. Human edits are simulated by changing that JSON as
+  the API reports them.
+- `tests/test_ids.py` covers the id scheme; `tests/test_layout.py` and
+  `tests/test_deck.py` cover layout and topic matching.
+- A conformance check enforces the code rules on every file.
 
-The check that matters most cannot be automated. Whether a
-slide reads well from the back of a room is a judgment, and
-the honest answer is that the human looks at the deck once
-before presenting. What automation buys is that the
-judgment is now about the words instead of about whether a
-text box is 0.2 inches too low.
+**Behaviour.** Each step was run twice against a scratch
+deck, the second run confirmed a no-op, frozen shapes were
+read back unchanged, and every page was exported to PDF and
+looked at (`probes/render_deck.py`).
+
+**Before presenting.** `g8_preflight.py` is read-only and
+lists unaccepted script boxes, leftover placeholders, a
+contents list that no longer matches the slides, boxes that
+probably overflow, topics without a picture, and benchmarks
+more than 7 days old. Exit 0 means "Ready to present."
 
 ## Failure handling
 
-What repairs itself:
+| Failure | Behaviour |
+|---|---|
+| no deck for the date | step exits, names the `g1` command |
+| deck already exists | `g1` prints its link, creates nothing |
+| author types during a write | re-read, re-plan once, then stop cleanly |
+| fixed slide deleted or parked | step logs it and writes nothing |
+| page unreachable or behind a bot wall | old picture kept, named in the log |
+| `sources/leaderboard.py` fails | cached JSON used, warning printed |
+| YouTube counts not found | skill passes them with `--json` |
+| upload left behind by a crash | `Host.clean()` runs in `finally`; names start `_tmp-seminar-` |
+| token missing | step names `g_auth.py` |
 
-- A failed download or screenshot is logged and skipped,
-  and the item renders with text at full slide width. One
-  dead URL does not stop a build.
-- A partially written file is discarded, because both `s1`
-  and `s2` write to a temporary name and rename only on
-  success.
-- `images/` is disposable and regenerates from
-  `images_raw/`.
-- Re-runs are idempotent. Every stage detects finished work
-  and skips it.
-- A missing `leaderboard.json` warns and leaves the
-  benchmark page empty rather than failing the build.
-
-What is never repaired automatically, and why:
-
-- **The deck file.** If a heading is malformed the parser
-  stops and names the line. Guessing what the author meant
-  would produce a wrong slide that looks right.
-- **`images_raw/` and `resources_raw/`.** Originals.
-  Nothing deletes them, including the orphan report.
-- **Committed decks in `2026/`.** The published record. No
-  script writes there; the copy is a human action.
-- **Any PPTX this pipeline did not produce.** The renderer
-  checks the target before writing and stops rather than
-  overwrite a hand-made deck. See
-  [Rebuilding minutes before the seminar](#rebuilding-minutes-before-the-seminar).
-
-Retry manners: `s1` tries a download twice with a short
-backoff, then gives up and logs. No infinite retry, because
-a missing picture is a cosmetic problem and the build
-should still finish.
+Nothing is auto-repaired in the deck itself. A script that
+cannot tell whether a shape is its own leaves it alone.
 
 ## Known limits and scaling gates
 
-Three simplifications, each with the measurement that would
-change the decision.
-
-**Almost every slide has the same shape.** One to three
-items, text left, picture right. Three pages differ, and
-each says so with a flag. `profile` on the author page puts a
-large portrait beside its details and centres the pair on
-the slide. `closing` on the sign-off page gives a 40 pt
-title centred a third of the way down with the links
-centred beneath. Neither draws a box: a page holding one
-thing does not need a frame around it to say so. `promo`
-on the channel page keeps its yellow box but sets the text
-at 22 pt with no bullet dots, beside a wider screenshot.
-
-Each of the three is a standing page that appears in every
-deck, which is what earns them the exception: the cost is
-paid once and recovered every week.
-
-This is the scaling gate below being spent, deliberately
-and twice. The rule it follows is the one written there:
-the deck file names a *kind* of slide and `deck_layout`
-owns what that kind looks like, so there are still no
-coordinates anywhere in the Markdown. A third exception
-would be a signal that the shape is wrong, not that the
-grammar needs another word. The hand-made collages in the
-older decks are more varied and sometimes more striking.
-This is the deliberate trade for never positioning anything
-again. Gate: if a recurring kind of slide genuinely needs a
-different shape, add a named layout to `deck_layout.py`
-chosen by section name, not coordinates in the deck file.
-
-**PPTX only, no PDF or HTML output.** The renderer targets
-one format. Gate: if slides need to go on the web, add a
-second renderer reading the same deck file. The contract
-already supports it, which is the reason for having a
-contract.
-
-**Everything is files in one directory, no database.** At
-52 decks a year with about 12 to 40 pictures each, five
-years is a few thousand files and a few GB. A filesystem
-finds that boring. Gate: if a single week's `images/`
-exceeds about 500 files, or a build takes over 20 seconds,
-revisit.
-
-Dependency discipline: four libraries, all mature, all
-already installed. `python-pptx` 1.0.2, `Pillow`,
-`openpyxl`, and ImageMagick 7 via `brew`, plus Google
-Chrome for screenshots. Pin them in a `requirements.txt`
-with exact versions and commit it. The freshest package is
-the least reviewed package, and nothing here needs a new
-feature.
+- **One shape of news slide.** Text left, picture right, up
+  to three topics. Gate: a recurring slide kind that needs
+  another shape gets a named layout in `layout/deck_layout.py`, not
+  per-slide positions.
+- **Overflow is estimated, not measured.** The API cannot
+  report rendered text height. Gate: if preflight misses
+  real overflow more than once a month, render a thumbnail
+  and measure.
+- **Sequential, one batch per slide.** Gate: if a full run
+  passes 3 minutes, host pictures in parallel.
+- **Copies are invisible.** A consequence of `drive.file`,
+  accepted for privacy. Gate: none; it is the point.
+- **Author's unfilled edits can be overwritten** by a
+  refresh step. Documented, and preflight lists every
+  unaccepted box.
 
 ## The shape of the thing
 
-The whole design is eight decisions.
+The whole design is seven decisions.
 
-1. **One Markdown file per week is the source of truth.**
-   Everything else is generated from it and can be thrown
-   away and rebuilt.
-2. **The author writes content and never layout.** The
-   deck file has no coordinates, no widths, no slide
-   breaks, and no font sizes, and no way to add them.
-3. **A section is not a slide.** The generator paginates a
-   section into as many slides as its text needs, repeating
-   the title, so nobody counts items.
-4. **The font ladder guarantees fit.** One shared size per
-   slide, stepped down until the text fits, so overflow is
-   solved rather than reported.
-5. **Every news item is a headline, bullets, and one
-   picture.** That uniformity is what makes automatic
-   layout possible at all.
-6. **Parsed numbers beat pictures of numbers.** The
-   benchmark page is parsed text from JSON. Pages with
-   nothing parseable get screenshotted instead, and
-   `shot:` makes that one line.
-7. **Raw pictures are permanent, clean pictures are
-   disposable.** Fetching is the expensive step, so it
-   happens once, and `s2` needs no backup of its own.
-8. **The author owns the file; the assistant is a guest.**
-   Two markers record a human update and a human deletion,
-   a sidecar file keeps a rejected topic from coming back,
-   matched by topic rather than by exact wording, and
-   a checker enforces both so the guarantee is verified
-   rather than promised.
+1. **The live deck is the only source of truth.** No file to
+   sync, nothing to regenerate, and the author edits the real
+   thing.
+2. **Ownership is structural.** A script owns what carries
+   its id prefix. Google will not let a copy keep that id, so
+   ownership cannot leak.
+3. **A fill is consent.** One click tells every script to
+   stop, with no markers, no file and no tool.
+4. **The separator is a wall, and the ledger is a memory.**
+   Parked and deleted topics never come back, however they
+   are reworded.
+5. **AI proposes, scripts place, the author decides.**
+   Judgement lives in skills, writes live in deterministic
+   code, acceptance lives in the deck.
+6. **Every write is checked three times.** Planner, guard,
+   revision id. A clash means re-read, never merge.
+7. **Nothing was assumed.** Every API behaviour the rules
+   depend on was probed before code relied on it.
 
 ## Appendix A: Requirements
 
-Functional:
-
 | ID | Requirement |
 |---|---|
-| F1 | Produce a 16:9 landscape PPTX, 10 x 5.625 in |
-| F2 | Content authored in one plain-text file per week |
-| F3 | Generate the table of contents from news headings |
-| F4 | Lay out every slide automatically, with no positioning by the author |
-| F5 | Paginate a section across as many slides as its text needs |
-| F6 | Each news item is a headline, bullets, and one illustrative picture |
-| F7 | Download pictures, or screenshot pages that are not pictures |
-| F8 | Normalize pictures to one slide-ready standard |
-| F9 | Render the benchmark page from leaderboard data as text, fitting the slide |
-| F10 | Render URLs as visible clickable link lines |
-| F11 | Deleting a topic records it in a sidecar file, and it is never recreated |
-| F12 | Deletion works either by hand or by marking items and running one script |
-| F13 | Output must remain editable in PowerPoint |
-
-Non-functional, with measurable targets:
-
-| ID | Requirement | Measured |
-|---|---|---|
-| N1 | Render from an unchanged deck file under 20 s | 0.34 s |
-| N2 | Rebuild all images under 20 s | 1.6 s |
-| N7 | A finished deck stays under 2 MB | 338 KB |
-| N3 | Every stage idempotent and re-runnable | yes |
-| N4 | No text silently clipped | 0 overflowing slides |
-| N5 | Python rules: files under 800 lines, functions under 35 lines, lines under 65 chars | 9 of 9 files pass |
-| N6 | No network access needed to build from cached images | yes |
+| F1 | Create a dated 16:9 deck with the standing pages, in a chosen Drive folder |
+| F2 | Add news topics (headline, bullets, link, picture) with automatic layout |
+| F3 | Generate the contents list from the slides in their current order |
+| F4 | Refresh benchmarks, Intelligence Index, YouTube counts and layoffs pages |
+| F5 | Never change a box the author filled, or its picture |
+| F6 | Never change anything the author created or pasted |
+| F7 | Never write past the separator; never re-add a parked or deleted topic |
+| F8 | Every step runnable at any time, in any order, repeatedly |
+| F9 | A read-only pre-seminar check |
+| S1 | No access to any Drive file the app did not create |
+| S2 | Credentials never committed; pictures public only while being inserted |
+| N1 | A second run of any step changes nothing (measured: yes) |
+| N2 | Skeleton under 60 s (29 s); a refresh step under 30 s (5 to 12 s) |
+| N3 | No text clipped at 12 pt on news slides (0 on the Sept 18 deck) |
+| N4 | Code rules: files < 800 lines, functions < 35, lines < 65, docstrings (all pass) |
 
 ## Appendix B: Technology choices
 
 | Layer | Choice | Why |
 |---|---|---|
-| Deck format | Markdown | Greppable, diffable, already the project's habit |
-| PPTX writing | python-pptx 1.0.2 | The only maintained option; installed |
-| Layout | our own, 280 lines | Pure arithmetic over measured constants, so it can be tested without opening a PPTX |
-| Image processing | ImageMagick 7 CLI | Installed, scriptable, no Python image dependency for conversion |
-| Image measuring | Pillow | Needed only to read width and height when fitting a box |
-| Screenshots | headless Google Chrome | Already on the machine; no Playwright or Selenium to install and pin |
-| Benchmark data | `leaderboard.py` + openpyxl | Already written and working |
-| News gathering | `/ai-news-digest` skill | Already written and working |
-| Language | Python 3.13 | The project's language; time goes to ImageMagick, Chrome, and file I/O, so a faster language would speed up the glue, and the glue was never the bottleneck |
+| Document | Google Slides | The author works there; editing, sharing and presenting are free |
+| API client | `google-api-python-client`, `google-auth-oauthlib` | Official; installed |
+| Scope | `drive.file` | Least access that works; probed |
+| Layout | own `layout/deck_layout.py` | Arithmetic over measured constants, testable without Google |
+| Pictures | headless Chrome, ImageMagick 7, Pillow | Already on the machine; no Playwright to pin |
+| Picture hosting | temporary Drive upload | No GitHub push; Slides keeps its own copy |
+| Benchmark data | `sources/leaderboard.py` | Already written; owns vendor rules |
+| News gathering | `ai-news-digest` skill | Already written |
+| Language | Python 3.13 | Time goes to network, Chrome and ImageMagick; faster glue would not help |
 
 ## Appendix C: Risks
 
 | Risk | Mitigation |
 |---|---|
-| Automatic layout looks worse than hand-made | Output stays editable in PowerPoint; a fix in `deck_layout.py` improves every future deck instead of one slide |
-| Height estimation drifts from what PowerPoint actually renders | Constants measured from real decks, asserted by layout tests, and the font ladder leaves headroom |
-| A screenshot captures a cookie banner or a half-loaded page | `images_raw/` keeps it, so re-shooting is one `--force` away, and the raw file can be replaced by hand |
-| Picture URL rots before the deck is built | `images_raw/` is permanent, so anything fetched once survives the source going away |
-| `leaderboard.py` breaks when the source page changes | It exits non-zero when no models parse; a missing JSON leaves the page empty with a warning rather than failing the build |
-| Deck grammar grows into a language | Seven rules, and any eighth needs a written reason here |
-| A human edit is silently reverted by the next pass | The `locked` marker and the deleted sidecar, enforced by `check_preserved.py` and warned about by the build, rather than by good intentions |
-| A thrown-out topic returns under a reworded headline | Topic matching folds case and space, accepts one headline containing the other, and compares significant words |
+| A script overwrites the author's work | id ownership + fill freeze + separator, enforced in planner and `guard`; tested on a lived-in fixture |
+| Author and script write at once | revision id on every batch; re-read and re-plan |
+| A rejected topic returns reworded | topic matching against deck, parked slides and ledger |
+| Google changes an API behaviour the rules rely on | probes in `probes/` re-run in a minute |
+| Screenshot shows a cookie or bot page | bot-wall check; picture replaceable by hand |
+| Token expires or is revoked | `g_auth.py` re-runs sign-in |
+| Layout estimate drifts from real rendering | measured padding and line pitch; preflight overflow check |
 
-## Appendix D: Status of the code
+## Appendix D: Measurements behind the design
 
-| File | State |
+| Probe | Result |
 |---|---|
-| `deck_parser.py` | new, the grammar and topic matching |
-| `deck_layout.py` | new, all geometry and pagination |
-| `s3_make_pptx.py` | new, the only module touching python-pptx |
-| `test_deck.py` | new, parser and layout tests |
-| `s1_fetch_images.py` | new, replaces `s1_download_images.py`, reads the deck file instead of a hardcoded list, adds `shot:` |
-| `s2_clean_images.py` | rewritten: raw to clean, aspect preserved, sized to the slide box at a chosen ppi, no backup machinery, orphan report |
-| `leaderboard.py` | extended with the JSON contract; `save_to_excel` split to satisfy the 35-line rule |
-| `s1_download_images.py` | superseded, safe to delete |
-| `s3_make_pdf.py` | superseded, safe to delete |
+| Page size | 9144000 x 5143500 EMU = 10 x 5.625 in, same as the layout |
+| Object id | at least 5 characters, unique across the presentation |
+| Duplicate a box (API and browser) | new id; alt text copied verbatim |
+| Fill by hand in the browser | reads as filled |
+| Unfilled box | `propertyState: NOT_RENDERED`, colour still white |
+| Default text padding | 0.10 in sides, 0.05 in top and bottom, not settable |
+| Line pitch, 12 pt Calibri | 14.24 pt |
+| Stored box size | fixed 3,000,000 EMU square plus scale transform |
+| Stale `requiredRevisionId` | HTTP 400, "does not match the latest revision" |
+| Delete and recreate one id in a batch | works |
+| `appProperties` search | finds the deck by date |
+| Speaker notes | writable and readable (topic ledger) |
+| Drive-hosted picture | inserted; survives unsharing and deleting the upload |
+| `drive.file` visibility | only app-created files; rename and move keep access |
+| TrueUp | Cloudflare challenge to automated clients |
 
-The `slides-update` skill drives all of it:
+The probe scripts are in `probes/`.
 
-| File | Purpose |
+## Appendix E: Code from the cancelled Markdown design
+
+The Markdown-to-PPTX workflow was removed on 2026-09-14:
+its deck files, `s3_make_pptx.py`, `s4_push_slides.py`,
+`pptx_text.py`, `move_deleted.py` and the `slides-update`
+skill. git history has them.
+
+Four modules from it are still used, for these parts only:
+
+| Module | Used for |
 |---|---|
-| `.claude/skills/slides-update/SKILL.md` | the weekly procedure and the ownership rules |
-| `tools/deck_init.py` | resolve the date, create the deck from the skeleton |
-| `tools/check_preserved.py` | enforce `locked` and the deleted sidecar |
-| `reference/deleted_skeleton.md` | the sidecar's starting text |
-| `reference/deck_skeleton.md` | the starting file, with the stable sections already locked |
+| `layout/deck_parser.py` | `Block`, `Section`, inline markup, `same_topic` |
+| `layout/deck_layout.py`, `layout/text_metrics.py` | all layout and measurement |
+| `sources/fetch_images.py` | download and Chrome screenshot helpers |
+| `sources/clean_images.py` | the ImageMagick conversion |
+
+Each still carries a Markdown-reading command line of its
+own (and `layout/deck_parser.py` the Markdown grammar and deleted
+sidecar functions, with their tests). None of that is called
+by the Slides workflow.
