@@ -37,7 +37,8 @@ Last updated: 2026-09-14
 import os
 import sys
 
-CRED_DIR = "credentials"
+CRED_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "credentials")
 CLIENT_FILE = os.path.join(CRED_DIR, "client_secret.json")
 TOKEN_FILE = os.path.join(CRED_DIR, "token.json")
 

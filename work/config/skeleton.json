@@ -1,0 +1,90 @@
+{
+  "_about": "Static wording of the standing slides. g1_new_deck.py reads it; the update steps refresh the numbers and pictures later.",
+  "aa_index": {
+    "title": "Artificial Analysis Intelligence Index",
+    "topics": [
+      {
+        "headline": "Artificial Analysis Intelligence Index",
+        "bullets": [
+          "Combines several evaluations into one score per model",
+          "Useful for comparing **cost per unit of intelligence**",
+          "https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index"
+        ],
+        "image": "assets/intelligence-index.jpg"
+      }
+    ]
+  },
+  "youtube": {
+    "title": "Weekly videos every Friday",
+    "kind": "promo",
+    "topics": [
+      {
+        "headline": "",
+        "bullets": [
+          "Weekly videos every Friday",
+          "7.46K subscribers, 333 videos",
+          "1. Subscribe to this channel",
+          "https://www.youtube.com/@lev-selector",
+          "2. Download slides from GitHub using links under the videos",
+          "!!3. Please pause the video - and answer the pinned question in comments under the video!!"
+        ],
+        "image": "assets/youtube-channel.jpg"
+      }
+    ]
+  },
+  "layoffs": {
+    "title": "Jobs and Layoffs",
+    "topics": [
+      {
+        "headline": "Layoffs.fyi tracker",
+        "bullets": [
+          "Tech layoffs by year, US only",
+          "https://layoffs.fyi"
+        ],
+        "image": "assets/layoffs-fyi.jpg"
+      },
+      {
+        "headline": "TrueUp tech layoff tracker",
+        "bullets": [
+          "Running totals and layoffs per day",
+          "https://trueup.io/layoffs"
+        ],
+        "image": "assets/trueup-layoffs.jpg"
+      }
+    ]
+  },
+  "about": {
+    "title": "About the Speaker",
+    "kind": "profile",
+    "topics": [
+      {
+        "headline": "Lev Selector, Ph.D.",
+        "bullets": [
+          "40+ years of software engineering, data science, and building teams (hiring, training, and managing)",
+          "Ph.D. in mathematical modeling and computer simulations",
+          "Interests: Generative AI, using LLMs with your data, local AI for local private data, cloud architecture, fin-tech, application security",
+          "Find and connect: LinkedIn, GitHub, YouTube, Google",
+          "https://eais.ai"
+        ],
+        "image": "assets/lev-photo.jpg"
+      }
+    ]
+  },
+  "thanks": {
+    "title": "Thank You!",
+    "kind": "closing",
+    "topics": [
+      {
+        "headline": "",
+        "bullets": [
+          "Videos of every seminar are on YouTube",
+          "https://www.youtube.com/@lev-selector",
+          "Slides on GitHub. Click a pptx file, then the download button on the right",
+          "https://github.com/lselector/seminar",
+          "Slides on Google Drive",
+          "https://drive.google.com/drive/folders/1dmj00iilSP-JYmriMUUaHCKz5X54e3UX?ths=true"
+        ]
+      }
+    ]
+  }
+}
