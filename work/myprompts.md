@@ -254,6 +254,13 @@ Please change page "Weekly Videos Every Friday" to look more like the attached f
 
 -----------------------------
 
+I want to change my workflow.
+Currently we designed a system to generate md file and then convert it to PPT.
+I want to work with Google Slides instead.
+I will be working with Google Slides document manually
+and have the automation to add content.
 
+How do I enable working with my personal Google Workspace 
+using Claude Code and python scripts (claude-agent-sdk)?
 
 -----------------------------
