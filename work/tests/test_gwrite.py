@@ -128,6 +128,19 @@ def test_guard_blocks_writes_to_human_and_frozen_shapes():
 
 
 # --------------------------------------------------------------
+def test_guard_lets_through_only_explicitly_allowed_shapes():
+    """allow opens one human shape, not the others."""
+    data = add_human_box(raw(), T.PAGE_LAYOFFS)
+    deck = G.parse_deck(data)
+    reqs = S.insert_text("SLIDES_API123456_0", "x")
+    kept, dropped = W.guard(deck, reqs,
+                            allow=("SLIDES_API123456_0",))
+    assert len(kept) == 1 and not dropped
+    kept, dropped = W.guard(deck, reqs, allow=("other",))
+    assert not kept and dropped == ["SLIDES_API123456_0"]
+
+
+# --------------------------------------------------------------
 def test_guard_allows_brand_new_shapes():
     """Creating and filling a new id is always fine."""
     deck = G.parse_deck(raw())

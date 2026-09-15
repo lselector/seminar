@@ -28,8 +28,14 @@ import os
 
 import g2_add_news as NEWS
 import g3_update_toc as TOC
+import g4_update_bench as BENCH
+import g5_update_aa_index as AA
+import g7_update_layoffs as LAY
+from sources import layoffs as LAYSRC
+from layout import deck_layout as L
 import g8_preflight as CHECK
 from gslides import deck as G
+from gslides import render as R
 from gslides import write as W
 from gslides import ids as T
 from layout.deck_parser import Block
@@ -161,10 +167,66 @@ def test_ledger_lines_are_appended_not_rewritten():
 def test_toc_follows_the_current_slide_order():
     """Layoffs moved up, so its topics come first."""
     names = TOC.collect(lived())
-    assert names[0] == "An Anthropic resignation turns into " \
-        "an extinction debate", names
+    assert names[0].startswith("An Anthropic resignation"), names
     assert names.index("Layoffs.fyi tracker") < \
         names.index("Artificial Analysis Intelligence Index")
+
+
+# --------------------------------------------------------------
+def test_toc_items_fit_one_line_without_links():
+    """Links and trailing marks go; long headlines are cut."""
+    assert TOC.shorten("English - https://lmarena.ai/x") == \
+        "English"
+    assert TOC.shorten("Tech Layoffs by year (US only):") == \
+        "Tech Layoffs by year (US only)"
+    long = ("Google's agentic video understanding cuts video "
+            "tokens by up to 88% across every benchmark")
+    short = TOC.shorten(long)
+    assert R.toc_fits(short) and long.startswith(short), short
+    assert short.split()[-1] not in TOC.DANGLING, short
+
+
+# --------------------------------------------------------------
+def test_toc_labels_rename_merge_and_leave_out():
+    """A label replaces, "-" drops, equal labels list once."""
+    deck = lived()
+    lines = TOC.headlines(deck)
+    labels = {lines[0]: "Anthropic Safety Debate",
+              lines[1]: "Anthropic Safety Debate",
+              lines[2]: "-"}
+    names = TOC.collect(deck, labels)
+    assert names[0] == "Anthropic Safety Debate", names
+    assert names.count("Anthropic Safety Debate") == 1
+    assert TOC.shorten(lines[2]) not in names
+
+
+# --------------------------------------------------------------
+def test_toc_labels_are_kept_in_the_toc_notes():
+    """Only new or changed labels are appended; last wins."""
+    deck = lived()
+    page = deck.slide(T.PAGE_TOC)
+    reqs = TOC.label_requests(deck, {"Sept 10": ""})
+    body = reqs[0]["insertText"]
+    assert body["objectId"] == page.notes_id
+    assert body["text"].endswith("Sept 10 => -")
+    page.notes = body["text"].lstrip("\n") + "\nSept 10 => X"
+    assert TOC.read_labels(deck) == {"Sept 10": "X"}
+    assert TOC.label_requests(deck, {"Sept 10": "X"}) == []
+
+
+# --------------------------------------------------------------
+def test_toc_is_a_bold_blue_bulleted_list():
+    """Every item has a dot and is bold blue."""
+    reqs = R.render_toc_columns("s-toc", "s-toc",
+                                ["One", "Two", "Three"], 1.0)
+    texts = [r["insertText"]["text"] for r in reqs
+             if "insertText" in r]
+    assert all(line.startswith(R.BULLET)
+               for t in texts for line in t.split("\n")), texts
+    styles = [r["updateTextStyle"]["style"] for r in reqs
+              if "updateTextStyle" in r]
+    assert styles and all(s.get("bold") for s in styles)
+    assert len(texts) == 2
 
 
 # --------------------------------------------------------------
@@ -183,6 +245,304 @@ def test_toc_leaves_a_frozen_contents_alone():
 
 
 # --------------------------------------------------------------
+def hand_aa_deck(date_filled=False):
+    """A talk whose Intelligence Index slide a human rebuilt."""
+    sid = "g_hand"
+
+    # --------------------------------------
+    def shape(oid, kind, text="", y=2.0, w=2.0, filled=False,
+              alt=""):
+        """One element on the hand-made slide."""
+        return G.Shape(id=oid, slide=sid, kind=kind, text=text,
+                       filled=filled, rect=L.Rect(0.5, y, w, 1),
+                       description=alt)
+
+    shapes = [
+        shape("g_title", G.KIND_TEXT, AA.HEADLINE + "\n",
+              y=0.05),
+        shape("g_box", G.KIND_TEXT,
+              AA.HEADLINE + "\nhttps://x\n", y=0.7, filled=True),
+        shape("g_date", G.KIND_TEXT, "Sept 10\n", y=1.5,
+              filled=date_filled),
+        shape("g_small", G.KIND_IMAGE, y=1.0, w=0.5),
+        shape("g_mine", G.KIND_IMAGE, y=3.0, w=9.5),
+        shape("g_chart", G.KIND_IMAGE, y=2.5, w=9.0,
+              alt="Chart. " + AA.CHART_MARK),
+    ]
+    slides = [G.Slide(id="s-toc", index=0),
+              G.Slide(id=sid, index=1, shapes=shapes)]
+    return G.Deck(id="d", title="t", revision="r", slides=slides)
+
+
+# --------------------------------------------------------------
+def test_aa_finds_a_hand_made_slide_by_its_title():
+    """The marked picture and the date box, nothing else.
+
+    g_mine is the largest picture, but it is the author's
+    own: no mark, so it is never chosen.
+    """
+    target = AA.locate(hand_aa_deck())
+    assert target.page.id == "g_hand"
+    assert target.picture == "g_chart"
+    assert target.date.id == "g_date"
+    assert set(target.allow) == {"g_chart", "g_date"}
+
+
+# --------------------------------------------------------------
+def test_aa_without_a_marked_picture_touches_no_picture():
+    """No mark, no picture: guessing is never allowed."""
+    deck = hand_aa_deck()
+    deck.shape("g_chart").description = ""
+    target = AA.locate(deck)
+    assert target.picture == ""
+    assert set(target.allow) == {"g_date"}
+
+
+# --------------------------------------------------------------
+def test_aa_updates_a_filled_date_box_on_a_hand_slide():
+    """The author's styling fill does not block the date."""
+    target = AA.locate(hand_aa_deck(date_filled=True))
+    assert target.date.id == "g_date"
+    assert "g_date" in target.allow
+
+
+# --------------------------------------------------------------
+def test_aa_script_slide_needs_no_exception():
+    """The script's own slide uses its picture, allows none."""
+    target = AA.locate(lived())
+    assert target.picture == AA.PICTURE
+    assert target.allow == ()
+
+
+# --------------------------------------------------------------
+def test_aa_date_is_rewritten_in_deck_style():
+    """Sept 10 becomes Sept 14; new text goes in first."""
+    assert W.date_label(dt.date(2026, 9, 14)) == "Sept 14"
+    assert AA.DATE.match("Sept 10") and AA.DATE.match("May 3")
+    assert not AA.DATE.match("Sept 10 was busy")
+    box = hand_aa_deck().shape("g_date")
+    reqs = W.replace_date(box, dt.date(2026, 9, 14))
+    assert reqs[0]["insertText"]["insertionIndex"] == 7
+    assert reqs[0]["insertText"]["text"] == "Sept 14"
+    assert reqs[1]["deleteText"]["textRange"]["endIndex"] == 7
+    assert W.replace_date(box, dt.date(2026, 9, 10)) == []
+
+
+# --------------------------------------------------------------
+def test_replace_date_keeps_words_and_padding():
+    """Only the date inside "Data for Sept 02" changes."""
+    box = G.Shape(id="g_d", slide="s", kind=G.KIND_TEXT,
+                  text="Data for Sept 02")
+    reqs = W.replace_date(box, dt.date(2026, 9, 5))
+    assert reqs[0]["insertText"]["text"] == "Sept 05"
+    assert reqs[0]["insertText"]["insertionIndex"] == 16
+    assert reqs[1]["deleteText"]["textRange"]["startIndex"] == 9
+
+
+# --------------------------------------------------------------
+def hand_bench_deck():
+    """A talk whose Benchmarks slide is two hand-made tables."""
+    sid = "g_bench"
+
+    # --------------------------------------
+    def shape(oid, kind, x, y, text="", cells=None):
+        """One element on the hand-made slide."""
+        return G.Shape(id=oid, slide=sid, kind=kind, text=text,
+                       rect=L.Rect(x, y, 3, 1),
+                       cells=cells or [])
+
+    head = ["Code", "Model", "Score"]
+    shapes = [
+        shape("g_date", G.KIND_TEXT, 4, 0.1,
+              "Data for Sept 02"),
+        shape("g_en", G.KIND_TEXT, 0.1, 0.6,
+              "English - https://x"),
+        shape("g_co", G.KIND_TEXT, 3.0, 0.6,
+              "Coding - https://y"),
+        shape("g_t_co", G.KIND_TABLE, 3.4, 1.0, cells=[
+            head, ["■", "old-coder", "1500"],
+            ["■", "same", "1400"]]),
+        shape("g_t_en", G.KIND_TABLE, 0.4, 1.0, cells=[
+            head, ["■", "old-english", "1490"]]),
+    ]
+    slides = [G.Slide(id="s-toc", index=0),
+              G.Slide(id=sid, index=1, shapes=shapes)]
+    return G.Deck(id="d", title="t", revision="r", slides=slides)
+
+
+BOARDS = [
+    {"label": "English", "cutoff": "2026-09-13", "entries": [
+        {"name": "claude-fable-5", "score": 1506,
+         "vendor": "anthropic", "url": "https://a/fable"}]},
+    {"label": "Coding", "cutoff": "2026-09-12", "entries": [
+        {"name": "gpt-6", "score": 1543, "vendor": "openai",
+         "url": "https://a/gpt"},
+        {"name": "same", "score": 1401, "vendor": "other"}]},
+]
+
+
+# --------------------------------------------------------------
+def test_bench_tables_are_matched_by_their_captions():
+    """English goes to the table under English, not by order."""
+    page = hand_bench_deck().slide("g_bench")
+    pairs = BENCH.pair_tables(page, BOARDS)
+    assert [(t.id, b["label"]) for t, b in pairs] == \
+        [("g_t_en", "English"), ("g_t_co", "Coding")]
+
+
+# --------------------------------------------------------------
+def test_bench_rows_change_only_what_differs():
+    """New name: colour, text, link. Same name: score only."""
+    deck = hand_bench_deck()
+    table = deck.shape("g_t_co")
+    reqs = BENCH.table_requests(table, BOARDS[1])
+    kinds = [next(iter(r)) for r in reqs]
+    assert kinds.count("updateTableCellProperties") == 1
+    texts = [r["insertText"]["text"] for r in reqs
+             if "insertText" in r]
+    assert texts == ["gpt-6", "1543", "1401"], texts
+    colour = reqs[0]["updateTableCellProperties"]
+    assert colour["tableRange"]["location"] == \
+        {"rowIndex": 1, "columnIndex": 0}
+
+
+# --------------------------------------------------------------
+def test_bench_hand_page_uses_the_site_cutoff_date():
+    """The latest cutoff lands in the date box, padded."""
+    deck = hand_bench_deck()
+    reqs = BENCH.hand_requests(deck, BOARDS)
+    dates = [r["insertText"]["text"] for r in reqs
+             if r.get("insertText", {}).get("objectId")
+             == "g_date"]
+    assert dates == ["Sept 13"], dates
+    assert set(BENCH.allowed_ids(deck)) == \
+        {"g_t_en", "g_t_co", "g_date"}
+
+
+FYI_TEXT = ("  Tech Layoffs by year (US only):\n"
+            "128.5K in 2026 (as of Sept 10, 2026)\n"
+            "124K in 2025 \n153K in 2024\n264K in 2023\n"
+            "165K in 2022      https://layoffs.fyi")
+TRUEUP_TEXT = ("  The Tech Layoff Tracker\n"
+               "In 2026: 187,160 people laid off (737 per day)\n"
+               "In 2025: 245,953 people laid off (674 per day)\n"
+               "In 2024: 238,461 people laid off (653 per day)\n"
+               "https://trueup.io/layoffs")
+
+
+# --------------------------------------------------------------
+def hand_layoffs_deck():
+    """A layoffs slide with the author's boxes and pictures."""
+    sid = T.PAGE_LAYOFFS
+
+    # --------------------------------------
+    def shape(oid, kind, y, h, text="", alt=""):
+        """One element on the hand-made slide."""
+        return G.Shape(id=oid, slide=sid, kind=kind, text=text,
+                       rect=L.Rect(1, y, 5, h), description=alt)
+
+    shapes = [
+        shape("g_links", G.KIND_TEXT, 0.05, 0.4,
+              "https://layoffs.fyi\nhttps://trueup.io/layoffs"),
+        shape("g_tru", G.KIND_TEXT, 0.6, 1.0, TRUEUP_TEXT),
+        shape("g_fyi", G.KIND_TEXT, 3.8, 1.4, FYI_TEXT),
+        shape("g_mine", G.KIND_IMAGE, 3.9, 1.2),
+        shape("g_pic_low", G.KIND_IMAGE, 3.5, 2.0,
+              alt=LAY.FYI_MARK),
+        shape("g_pic_top", G.KIND_IMAGE, 0.5, 2.8,
+              alt=LAY.TRUEUP_MARK),
+    ]
+    slides = [G.Slide(id="s-toc", index=0),
+              G.Slide(id=sid, index=1, shapes=shapes)]
+    return G.Deck(id="d", title="t", revision="r", slides=slides)
+
+
+# --------------------------------------------------------------
+def test_layoffs_hand_slide_parts_are_found():
+    """Boxes by their lines, pictures only by their mark."""
+    hand = LAY.locate_hand(hand_layoffs_deck())
+    assert hand.trueup_box.id == "g_tru"
+    assert hand.fyi_box.id == "g_fyi"
+    assert hand.trueup_picture == "g_pic_top"
+    assert hand.fyi_picture == "g_pic_low"
+    assert set(hand.allow()) == \
+        {"g_tru", "g_fyi", "g_pic_top", "g_pic_low"}
+    assert "g_mine" not in hand.allow()
+    assert LAY.locate_hand(lived()) is None
+
+
+# --------------------------------------------------------------
+def test_your_own_picture_on_a_content_page_is_never_touched():
+    """No step may delete or replace a picture a human added.
+
+    Checked at every level: the planner's sweep, picture
+    refresh, and the last-line guard on raw requests.
+    """
+    deck = lived()
+    page = deck.slide(T.PAGE_NEWS_2)
+    mine = G.Shape(id="g_my_photo", slide=page.id,
+                   kind=G.KIND_IMAGE, rect=L.Rect(1, 1, 2, 2))
+    page.shapes.append(mine)
+    rebuilt = W.replace_owned(deck, page.id, [])
+    assert "g_my_photo" not in {W.target(r) for r in rebuilt}
+    assert W.refresh_picture(deck, "g_my_photo", "https://x") \
+        == []
+    raw = [{"deleteObject": {"objectId": "g_my_photo"}},
+           {"replaceImage": {"imageObjectId": "g_my_photo",
+                             "url": "https://x"}}]
+    kept, dropped = W.guard(deck, raw)
+    assert not kept and dropped == ["g_my_photo"]
+    assert not NEWS.free_placeholder(deck, T.PAGE_NEWS_2,
+                                     T.TOPIC_NEWS_2)
+
+
+# --------------------------------------------------------------
+def test_layoffs_fyi_numbers_keep_their_rounding():
+    """One decimal stays one decimal; the date is today."""
+    totals = {2026: 128873, 2025: 122606, 2024: 152922,
+              2023: 265660, 2022: 165269}
+    day = dt.date(2026, 9, 14)
+    edits = LAY.fyi_edits(FYI_TEXT, totals, day)
+    text = W.apply_edits(FYI_TEXT, edits)
+    assert "128.9K in 2026 (as of Sept 14, 2026)" in text, text
+    assert "123K in 2025 \n153K in 2024\n266K in 2023\n" \
+        "165K in 2022" in text, text
+    doubled = text.replace("K in", "KK in")
+    assert W.apply_edits(doubled, LAY.fyi_edits(doubled, totals,
+                                              day)) == text
+    assert LAY.fyi_edits(FYI_TEXT, {}, day) == []
+
+
+# --------------------------------------------------------------
+def test_trueup_sentence_and_lines():
+    """Totals read from the sentence land in the right lines."""
+    page = ("So far in 2026, there have been 602\xa0layoffs at "
+            "tech companies with 187,604 people impacted (727 "
+            "people per day). In 2025, there were 783 layoffs "
+            "at tech companies w/ 245,953 people impacted (674 "
+            "people per day).")
+    totals = LAYSRC.parse_trueup(page)
+    assert totals == {2026: ("187,604", "727"),
+                      2025: ("245,953", "674")}
+    edits = LAY.trueup_edits(TRUEUP_TEXT, totals)
+    assert [n for _, _, n in edits] == \
+        ["187,604", "727", "245,953", "674"]
+
+
+# --------------------------------------------------------------
+def test_replace_spans_runs_backwards_and_skips_equal():
+    """Later spans are written first; unchanged spans skipped."""
+    text = "a 11 b 22"
+    reqs = W.replace_spans("box", text,
+                           [(2, 4, "111"), (7, 9, "22")])
+    assert len(reqs) == 2
+    assert reqs[0]["insertText"]["insertionIndex"] == 4
+    reqs = W.replace_spans("box", text,
+                           [(2, 4, "1"), (7, 9, "3")])
+    assert reqs[0]["insertText"]["insertionIndex"] == 9
+
+
+# --------------------------------------------------------------
 def test_replace_line_changes_one_line_only():
     """The counts line is swapped; nothing else is touched."""
     deck = lived()
@@ -195,6 +555,79 @@ def test_replace_line_changes_one_line_only():
     assert reqs[1]["insertText"]["insertionIndex"] == start
     assert W.replace_line(deck, "t-youtube-b", "subscribers",
                           "7.51K subscribers, 337 videos") == []
+
+
+# --------------------------------------------------------------
+def text_box(text, h, w=2.0, styles=None):
+    """A hand-made text box with a given height."""
+    return G.Shape(id="g_box", slide="s", kind=G.KIND_TEXT,
+                   text=text, rect=L.Rect(1, 1, w, h),
+                   size_emu=(w * 914400, 914400),
+                   transform={"scaleX": 1, "scaleY": h,
+                              "unit": "EMU"},
+                   styles=styles or [(12, False)])
+
+
+# --------------------------------------------------------------
+def heights(reqs):
+    """New heights, in inches, that requests set."""
+    return [r["updatePageElementTransform"]["transform"]
+            ["scaleY"] for r in reqs
+            if "updatePageElementTransform" in r]
+
+
+# --------------------------------------------------------------
+def test_an_edit_that_adds_a_line_grows_the_box_by_it():
+    """One more 12pt line adds one line height, padding kept."""
+    box = text_box("one\ntwo", 0.50)
+    line = L.points_to_inches(12 * L.LINE_RATIO)
+    grown = heights(W.edit_spans(box, [(7, 7, "\nthree")]))
+    assert len(grown) == 1 and abs(grown[0] - (0.50 + line)) \
+        < 0.001, grown
+    assert heights(W.edit_spans(box, [(0, 3, "ONE")])) == []
+
+
+# --------------------------------------------------------------
+def test_an_edit_that_unwraps_a_line_shrinks_the_box():
+    """A long line cut short takes its extra lines away."""
+    long = "word " * 30
+    box = text_box(long.strip(), 1.80)
+    shrunk = heights(W.edit_spans(box, [(0, len(long) - 1,
+                                         "short")]))
+    assert len(shrunk) == 1 and 0.2 < shrunk[0] < 0.5, shrunk
+    small = text_box(long.strip(), 0.50)
+    floor = heights(W.edit_spans(small, [(0, len(long) - 1,
+                                          "short")]))
+    assert floor and floor[0] > 0.15, floor
+
+
+# --------------------------------------------------------------
+def test_a_rewritten_box_is_exactly_as_tall_as_its_text():
+    """refresh_text sizes the box from the body it writes."""
+    body = R.plain_body("first line\nsecond line", 14)
+    box = text_box("old", 3.0, w=4.0)
+    want = R.box_height(R.body_paragraphs(body), 4.0)
+    assert heights(W.fit_rewrite(box, body)) == \
+        [W.S.emu(want) / 914400]
+    assert [p[:3] for p in R.body_paragraphs(body)] == \
+        [("first line", 14, False), ("second line", 14, False)]
+
+
+# --------------------------------------------------------------
+def test_paragraph_styles_are_read_per_paragraph():
+    """Size and bold come from most of each paragraph."""
+    shape_json = {"text": {"textElements": [
+        {"textRun": {"content": "Title\n", "style": {
+            "fontSize": {"magnitude": 14}, "bold": True}}},
+        {"textRun": {"content": "In 2026: ", "style": {
+            "fontSize": {"magnitude": 12}}}},
+        {"textRun": {"content": "1", "style": {
+            "fontSize": {"magnitude": 12}, "bold": True}}},
+        {"textRun": {"content": " laid off\n", "style": {
+            "fontSize": {"magnitude": 12}}}},
+    ]}}
+    assert G.paragraph_styles(shape_json) == \
+        [(14, True), (12, False)]
 
 
 # --------------------------------------------------------------

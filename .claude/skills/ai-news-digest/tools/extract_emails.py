@@ -4,7 +4,7 @@ Extract plain text from recent messages in a Postbox
 
 Postbox stores each mail folder as a single mbox file.
 This tool splits that file on the Postbox separator line
-("From - <date>"), keeps messages from the last N days,
+("From - <date>" or a bare "From "), keeps messages from the last N days,
 converts HTML bodies to plain text, and collects article
 links together with their anchor text.
 
@@ -25,7 +25,7 @@ Notes:
   any "From " line and shreds newsletters into fragments.
 
 Created: 2026-09-02
-Last updated: 2026-09-02
+Last updated: 2026-09-14
 """
 
 import argparse
@@ -47,8 +47,9 @@ DEFAULT_MBOX = (
     "my_gmail_folders.sbd/___Medium_Twitter"
 )
 
-# Postbox writes this exact separator before each message.
-SEPARATOR = re.compile(rb"(?m)^From - .*\r?\n")
+# Postbox writes "From - <date>" before each message; newer
+# resynced folders use a bare "From " line (CRLF) instead.
+SEPARATOR = re.compile(rb"(?m)^From (?:- .*)?\r?\n")
 
 URL_RE = re.compile(r"https?://[^\s\"'<>)\]]+")
 

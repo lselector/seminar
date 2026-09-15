@@ -25,7 +25,31 @@ next week's news words it differently.
 
 **3. Your own boxes are always yours.** Anything you add by
 hand, including a copy of a script box, belongs to you. No
-script changes it or removes it.
+script changes it or removes it. Three exceptions, by
+request, even if you made the shapes:
+
+- Intelligence Index slide: step 5 replaces the chart
+  picture and the date box (`Sept 10`).
+- Benchmarks slide: step 4 fills the two Code | Model |
+  Score tables and the date box (`Data for Sept 02`) with
+  the latest LM Arena data and its vote cutoff date.
+- Jobs and Layoffs slide: step 7 updates the numbers and
+  date in the TrueUp and layoffs.fyi boxes and replaces the
+  two chart pictures.
+
+**Pictures you add are never deleted or replaced**, on any
+slide. A script replaces a picture you placed only when its
+alt text description names it as a chart (right-click the
+picture, Alt text, Description):
+
+| Description contains | Refreshed by |
+|---|---|
+| `auto: aa-index-chart` | step 5, the Cost per Intelligence Index Task chart |
+| `auto: trueup-chart` | step 7, TrueUp's Tech Employees Impacted chart |
+| `auto: layoffs-fyi-chart` | step 7, layoffs.fyi's Recent Tech Layoffs chart |
+
+The marks travel with a slide copied into next week's deck.
+To keep a marked picture as it is, delete the mark.
 
 That is all. Everything else below is detail.
 
@@ -49,7 +73,7 @@ today when today is Friday.
 |---|---|---|
 | 1. Create the deck | `python3 g1_new_deck.py` | |
 | 2. Add news | `python3 g2_add_news.py --json news.json` | `/gslides-add-news` |
-| 3. Contents and epigraph | `python3 g3_update_toc.py` | `/gslides-update-toc` |
+| 3. Contents and epigraph | `python3 g3_update_toc.py --json toc.json` | `/gslides-update-toc` |
 | 4. Benchmarks | `python3 g4_update_bench.py` | `/gslides-update-benchmarks` |
 | 5. Intelligence Index | `python3 g5_update_aa_index.py` | `/gslides-update-aa-index` |
 | 6. YouTube counts | `python3 g6_update_youtube.py` | `/gslides-update-youtube` |
@@ -61,6 +85,21 @@ Running one twice either refreshes it or does nothing. Steps
 that need judgement (finding news, reading numbers off a web
 page) are skills: Claude does the reading and hands the
 result to the script as JSON.
+
+Every text box a script writes is as tall as its text.
+Slides' "resize shape to fit text" cannot be switched on
+through the API (probed 2026-09-14: only `NONE` is
+accepted), so the scripts measure the text and set the
+height themselves. A box a script creates or rewrites gets
+exactly its text's height. A box a script only edits (a
+number, a date, one line) grows or shrinks by what the edit
+did to the text, so the padding you set by hand stays.
+
+The contents on slide 1 is a bold blue bulleted list in two
+columns, one short line per topic, no links. Step 3 takes
+short labels in `toc.json` (`{"toc": {headline: label}}`,
+`"-"` leaves a line out) and keeps them in that slide's
+speaker notes; a headline with no label is cut to fit.
 
 ## The deck
 

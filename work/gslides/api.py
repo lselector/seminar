@@ -276,6 +276,67 @@ def set_height(object_id, size_emu, transform, height_in):
 
 
 # --------------------------------------------------------------
+def cell_at(table_id, row, column):
+    """The object id and cell location of one table cell."""
+    return {"objectId": table_id,
+            "cellLocation": {"rowIndex": row,
+                             "columnIndex": column}}
+
+
+# --------------------------------------------------------------
+def swap_cell_text(table_id, row, column, old, new):
+    """Replace a cell's text, keeping the style it had.
+
+    The new text goes in after the old, so it takes the old
+    text's style, and then the old text is deleted.
+    """
+    if old == new:
+        return []
+    end = len(old.encode("utf-16-le")) // 2
+    reqs = [{"insertText": {**cell_at(table_id, row, column),
+                            "insertionIndex": end,
+                            "text": new}}]
+    if end:
+        reqs.append({"deleteText": {
+            **cell_at(table_id, row, column),
+            "textRange": {"type": "FIXED_RANGE",
+                          "startIndex": 0, "endIndex": end},
+        }})
+    return reqs
+
+
+# --------------------------------------------------------------
+def cell_link(table_id, row, column, url):
+    """Point all of a cell's text at one link."""
+    return [{"updateTextStyle": {
+        **cell_at(table_id, row, column),
+        "textRange": {"type": "ALL"},
+        "style": {"link": {"url": url}},
+        "fields": "link",
+    }}]
+
+
+# --------------------------------------------------------------
+def cell_colour(table_id, row, column, colour):
+    """Paint a cell's background and its text one colour."""
+    location = cell_at(table_id, row, column)["cellLocation"]
+    return [{"updateTableCellProperties": {
+        "objectId": table_id,
+        "tableRange": {"location": location,
+                       "rowSpan": 1, "columnSpan": 1},
+        "tableCellProperties": {"tableCellBackgroundFill": {
+            "solidFill": {"color": rgb(colour)}}},
+        "fields": "tableCellBackgroundFill.solidFill.color",
+    }}, {"updateTextStyle": {
+        **cell_at(table_id, row, column),
+        "textRange": {"type": "ALL"},
+        "style": {"foregroundColor": {
+            "opaqueColor": rgb(colour)}},
+        "fields": "foregroundColor",
+    }}]
+
+
+# --------------------------------------------------------------
 def delete_object(object_id):
     """Remove one object, such as the starting slide."""
     return [{"deleteObject": {"objectId": object_id}}]

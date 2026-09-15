@@ -21,6 +21,42 @@ Thank You are left out, as in the archive decks.
 If the log says `left alone, you filled ...`, the author has
 taken over the contents. Tell them; do not work around it.
 
+### Short labels
+
+The contents is a bold blue bulleted list in two columns.
+Every item must fit on one line and carry no links or
+details. The log prints each headline and the item it
+became (`item  <=  headline`). A headline without a label is
+cut at a word to fit, which often reads badly, so write a
+label for every long or messy one and pass them:
+
+```bash
+cat > /tmp/toc.json <<'EOF'
+{"toc": {
+  "English - https://lmarena.ai/leaderboard/text": "Crowd-sourced LM Arena",
+  "Coding - https://lmarena.ai/leaderboard/text/coding": "Crowd-sourced LM Arena",
+  "OpenAI shelves its 2026 IPO as Anthropic heads to Nasdaq": "OpenAI Delays IPO, Anthropic to Nasdaq",
+  "Tech Layoffs by year (US only):": "Jobs & Layoffs",
+  "Sept 10": "-"
+}}
+EOF
+python3 g3_update_toc.py --json /tmp/toc.json
+```
+
+Rules for labels, as in the archive decks:
+
+- Keys are the headlines exactly as the log prints them.
+- About 40 characters or fewer, Title Case, the concrete
+  thing: `OpenAI GPT-6 Astra`, `DeepSeek V4.1 Flash Release`.
+- Give several boxes of one slide the same label to list
+  them once (benchmarks, layoffs).
+- `"-"` leaves out a line that is not a topic, such as a
+  date or a sub-heading.
+
+Labels are appended to the contents slide's speaker notes,
+so later plain runs keep them. Only new headlines need one.
+The same JSON file can also carry `"epigraph"`.
+
 ## Epigraph
 
 Only when the epigraph box on slide 1 still shows

@@ -54,6 +54,8 @@ YELLOW = (0xFF, 0xF2, 0xCC)
 GREY = (0x59, 0x59, 0x59)
 
 BULLET = "● "
+TOC_BLUE = (0x44, 0x72, 0xC4)
+TOC_COLUMNS = 2
 TOC_SIZE = 14
 EPIGRAPH_SIZE = 18
 EPIGRAPH_X = 5.90
@@ -215,6 +217,55 @@ def height_in_box(block, width, size):
 
 
 # --------------------------------------------------------------
+def body_paragraphs(body):
+    """(text, size, bold, bullet) for each line of a Body."""
+    raw = body.text.encode("utf-16-le")
+    out = []
+    for start, end, bullet in body.lines:
+        weight = {}
+        for s_start, s_end, style in body.spans:
+            overlap = min(end, s_end) - max(start, s_start)
+            if overlap > 0:
+                key = (style.get("size") or 12,
+                       bool(style.get("bold")))
+                weight[key] = weight.get(key, 0) + overlap
+        size, bold = max(weight, key=weight.get) if weight \
+            else (12, False)
+        text = raw[2 * start:2 * end].decode("utf-16-le")
+        out.append((text.rstrip("\n"), size, bold, bullet))
+    return out
+
+
+# --------------------------------------------------------------
+def text_height(paragraphs, width):
+    """Height of paragraphs at an inner width, with slack.
+
+    paragraphs are (text, size, bold, bullet). A bulleted
+    line wraps under its first word, so it has less width.
+    """
+    total = 0.0
+    for text, size, bold, bullet in paragraphs:
+        room = width - (L.BULLET_INSET if bullet else 0.0)
+        lines = max(1, L.wrapped_lines(text, room, size, bold))
+        total += lines * L.points_to_inches(size * L.LINE_RATIO)
+    return total + TEXT_SLACK
+
+
+# --------------------------------------------------------------
+def box_height(paragraphs, box_width):
+    """Height a box as read from the deck needs, padding in."""
+    return text_height(paragraphs, box_width - 2 * PAD_X) \
+        + 2 * PAD_Y
+
+
+# --------------------------------------------------------------
+def fit_rect(rect, body):
+    """A layout rect made exactly as tall as its text."""
+    return L.Rect(rect.x, rect.y, rect.w,
+                  text_height(body_paragraphs(body), rect.w))
+
+
+# --------------------------------------------------------------
 def fit_size(block, rect, ceiling=None):
     """Largest ladder size at which a block fits a box.
 
@@ -333,7 +384,21 @@ def render_content(slide_id, tag, page, keys, fill=YELLOW,
 
 
 # --------------------------------------------------------------
-def toc_columns(names, count=3):
+def toc_column_width(count=TOC_COLUMNS):
+    """Width of one contents column."""
+    return (L.CONTENT_W - TOC_GAP * (count - 1)) / max(1, count)
+
+
+# --------------------------------------------------------------
+def toc_fits(name, width=None):
+    """Does one contents item, dot included, fit one line?"""
+    width = width or toc_column_width()
+    return L.wrapped_lines(BULLET + name, width, TOC_SIZE,
+                           bold=True) <= 1
+
+
+# --------------------------------------------------------------
+def toc_columns(names, count=TOC_COLUMNS):
     """Split the headlines into equal top-down columns."""
     if not names:
         return []
@@ -371,10 +436,10 @@ def render_epigraph(slide_id, tag, text):
 # --------------------------------------------------------------
 def toc_column_rect(index, count, column, top):
     """Where one contents column sits and how tall it is."""
-    width = (L.CONTENT_W - TOC_GAP * (count - 1))
-    width = width / max(1, count)
+    width = toc_column_width(count)
     tall = sum(
-        L.wrapped_lines(n, width, TOC_SIZE) for n in column
+        L.wrapped_lines(BULLET + n, width, TOC_SIZE, bold=True)
+        for n in column
     ) * L.points_to_inches(TOC_SIZE * L.LINE_RATIO)
     return L.Rect(L.MARGIN + index * (width + TOC_GAP), top,
                   width, min(L.BAND_H, tall + 0.06))
@@ -382,15 +447,17 @@ def toc_column_rect(index, count, column, top):
 
 # --------------------------------------------------------------
 def render_toc_columns(slide_id, tag, names, top, fill=YELLOW):
-    """Draw the contents list as up to three boxes."""
+    """Draw the contents as bold blue bulleted columns."""
     columns = toc_columns(names)
     reqs = []
+    style = {"size": TOC_SIZE, "colour": TOC_BLUE,
+             "bold": True, "font": FONT}
     for index, column in enumerate(columns):
         body = Body()
         for name in column:
-            body.run(name, size=TOC_SIZE, colour=BLACK,
-                     font=FONT)
-            body.end_line()
+            body.run(BULLET, **style)
+            body.run(name, **style)
+            body.end_line(bullet=True)
         rect = toc_column_rect(index, len(columns), column,
                                top)
         box = T.shape_id(tag, f"c{index}")

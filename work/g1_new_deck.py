@@ -89,9 +89,10 @@ HINT_SIZE = 14
 def placeholder(box_id, slide_id, rect, hint, size=HINT_SIZE,
                 colour=R.GREY, italic=True):
     """A bordered, unfilled box holding a bracketed hint."""
-    reqs = R.make_box(box_id, slide_id, rect, border=True)
     body = R.plain_body(hint, size, colour=colour,
                         italic=italic)
+    reqs = R.make_box(box_id, slide_id, R.fit_rect(rect, body),
+                      border=True)
     return reqs + R.write_body(box_id, body)
 
 
@@ -176,9 +177,11 @@ def closing_pages():
     rect = L.Rect(L.MARGIN, L.BAND_TOP + 0.40,
                   L.CONTENT_W * 0.7, 1.40)
     box = T.shape_id(sep, "note")
-    reqs += R.make_box(box, sep, rect, border=True)
-    reqs += R.write_body(box, R.plain_body(
-        SEPARATOR_TEXT, 18, colour=R.RED, bold=True))
+    note = R.plain_body(SEPARATOR_TEXT, 18, colour=R.RED,
+                        bold=True)
+    reqs += R.make_box(box, sep, R.fit_rect(rect, note),
+                       border=True)
+    reqs += R.write_body(box, note)
     parked = T.PAGE_PARKED
     return [(sep, reqs),
             (parked, R.render_title(parked, parked,

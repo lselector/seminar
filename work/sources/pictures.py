@@ -5,7 +5,13 @@ Get one picture ready for a slide, on this machine.
 Two stages per picture, in a temporary directory:
 
     fetch   download it ({"src": url}), screenshot a web page
-            ({"shot": url}), or use a local file ({"file": p})
+            ({"shot": url}), screenshot only the block under
+            a heading ({"shot": url, "element": heading},
+            with optional "width" of the viewport,
+            "visible": true for pages with a bot check, and
+            "ready": a JavaScript test that the chart has
+            its data),
+            or use a local file ({"file": p})
     clean   trim, flatten and shrink it with ImageMagick to
             the pixels its box on the slide actually needs
 
@@ -30,6 +36,7 @@ import tempfile
 
 from sources import fetch_images as F
 from sources import clean_images as C
+from sources import element_shot as E
 
 CHALLENGE_MARKS = ("just a moment", "challenge-platform",
                    "cf-chl", "performing security verification")
@@ -110,6 +117,16 @@ def fetch(spec, folder):
         return path if os.path.isfile(path) else None
     if spec.get("src"):
         return download(spec["src"], folder)
+    if spec.get("shot") and spec.get("element"):
+        visible = spec.get("visible", False)
+        if not visible and challenged(spec["shot"]):
+            log(f"  {spec['shot']} is behind a bot check")
+            return None
+        return E.shoot_element(spec["shot"], spec["element"],
+                               os.path.join(folder, "shot.png"),
+                               width=spec.get("width", E.WIDTH),
+                               visible=visible,
+                               ready=spec.get("ready"))
     if spec.get("shot"):
         return screenshot(spec["shot"], folder)
     return None
