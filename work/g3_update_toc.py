@@ -9,23 +9,35 @@ and empty placeholders are skipped, and so are the slides
 the archive decks leave out of the contents: Benchmarks, the
 YouTube promo, About the Speaker and Thank You.
 
-The list is written as up to three columns on s-toc. If you
-filled any TOC column, the whole TOC is yours and is left
-alone, so the columns never disagree with each other.
+Each item is a short label on one line: a bold blue bulleted
+list in two columns, with no links or details. A skill can
+pass labels for headlines; "-" leaves a headline out, and
+headlines given the same label are listed once:
 
-The epigraph is written only when a skill supplies one and
-the epigraph box still holds its placeholder unfilled:
+    {"toc": {"English - https://lmarena.ai/...": "LM Arena",
+             "Sept 10": "-"},
+     "epigraph": "Agents got their own computers."}
 
-    {"epigraph": "Agents got their own computers."}
+Labels are kept in the contents slide's speaker notes, so a
+later plain run uses them too. A headline with no label has
+its links and trailing marks removed and is cut at a word
+until it fits one line.
+
+If you filled any TOC column, the whole TOC is yours and is
+left alone, so the columns never disagree with each other.
+The epigraph is written only while its box still holds its
+placeholder.
 
 Usage:
     python3 g3_update_toc.py                  next Friday
     python3 g3_update_toc.py 2026-09-18
-    python3 g3_update_toc.py --json epi.json  with an epigraph
+    python3 g3_update_toc.py --json toc.json  labels, epigraph
 
 Created: 2026-09-14
 Last updated: 2026-09-14
 """
+
+import re
 
 from layout import deck_layout as L
 from gslides import deck as G
@@ -39,6 +51,13 @@ from gslides.step import load_json, page_or_stop, start
 LABEL = "table of contents"
 MAX_COLUMNS = 3
 EPIGRAPH_BOX = T.shape_id(T.PAGE_TOC, "epi")
+LABELS_HEAD = "Contents labels. Kept by g3_update_toc.py."
+LABEL_SEP = " => "
+LEAVE_OUT = "-"
+URL = re.compile(r"https?://\S+")
+TRIM = " -–—:|,;.●"
+DANGLING = {"a", "an", "and", "as", "at", "by", "for", "from",
+            "in", "of", "on", "or", "the", "to", "with"}
 
 # Pages the archive decks keep out of the contents.
 NOT_IN_TOC = {T.PAGE_TOC, T.PAGE_BENCH, T.PAGE_YOUTUBE,
@@ -63,9 +82,35 @@ def headline(shape):
 
 
 # --------------------------------------------------------------
-def collect(deck):
-    """Headlines of the talk, in the current slide order."""
-    names = []
+def shorten(line):
+    """A one-line item: no links, cut at a word to fit."""
+    words = URL.sub(" ", line).replace("●", " ").split()
+    text = " ".join(words).strip(TRIM)
+    while len(words) > 1 and not R.toc_fits(text):
+        words.pop()
+        while len(words) > 1 and \
+                words[-1].strip(TRIM).lower() in DANGLING:
+            words.pop()
+        text = " ".join(words).strip(TRIM)
+    return text
+
+
+# --------------------------------------------------------------
+def read_labels(deck):
+    """Headline-to-label pairs from the TOC notes; last wins."""
+    page = deck.slide(T.PAGE_TOC)
+    labels = {}
+    for line in (page.notes if page else "").split("\n"):
+        if LABEL_SEP in line:
+            key, label = line.split(LABEL_SEP, 1)
+            labels[key.strip()] = label.strip()
+    return labels
+
+
+# --------------------------------------------------------------
+def headlines(deck):
+    """First lines of the talk, in the current slide order."""
+    lines = []
     for slide in deck.main():
         if slide.id in NOT_IN_TOC:
             continue
@@ -74,9 +119,47 @@ def collect(deck):
                     G.is_placeholder(shape.text):
                 continue
             line = headline(shape)
-            if line and line not in names:
-                names.append(line)
+            if line and line not in lines:
+                lines.append(line)
+    return lines
+
+
+# --------------------------------------------------------------
+def collect(deck, labels=None):
+    """Contents items of the talk, in the current order."""
+    labels = labels or {}
+    names = []
+    for line in headlines(deck):
+        label = labels.get(line, line).strip() or LEAVE_OUT
+        if label == LEAVE_OUT:
+            continue
+        name = shorten(label)
+        if name and name not in names:
+            names.append(name)
     return names
+
+
+# --------------------------------------------------------------
+def label_requests(deck, given):
+    """Append new or changed labels to the TOC notes."""
+    page = deck.slide(T.PAGE_TOC)
+    known = read_labels(deck)
+    lines = [f"{k}{LABEL_SEP}{v.strip() or LEAVE_OUT}"
+             for k, v in given.items()
+             if known.get(k) != (v.strip() or LEAVE_OUT)]
+    if not lines:
+        return []
+    if not page or not page.notes_id:
+        log(f"{LABEL}: no notes on the TOC slide, labels not "
+            f"kept")
+        return []
+    text = "\n".join(lines)
+    head = "\n" if page.notes.strip() else LABELS_HEAD + "\n"
+    return [{"insertText": {
+        "objectId": page.notes_id,
+        "insertionIndex": R.u16(page.notes),
+        "text": head + text,
+    }}]
 
 
 # --------------------------------------------------------------
@@ -124,19 +207,33 @@ def epigraph_requests(deck, text):
 
 
 # --------------------------------------------------------------
-def plan_for(epigraph):
+def log_items(deck, labels):
+    """Show each headline and the item it became."""
+    for line in headlines(deck):
+        label = labels.get(line, line).strip() or LEAVE_OUT
+        item = "(left out)" if label == LEAVE_OUT \
+            else shorten(label)
+        log(f"    {item}" if item == line
+            else f"    {item}  <=  {line}")
+
+
+# --------------------------------------------------------------
+def plan_for(extra):
     """Build the planning function for run_plan."""
+    given = extra.get("toc") or {}
 
     # --------------------------------------
     def plan(deck):
-        """Contents and, if given, the epigraph."""
+        """Contents, labels and, if given, the epigraph."""
         if not page_or_stop(deck, T.PAGE_TOC, LABEL):
             return []
-        names = collect(deck)
-        log(f"{LABEL}: {len(names)} headlines")
-        for name in names:
-            log(f"    {name}")
-        return [("epigraph", epigraph_requests(deck, epigraph)),
+        labels = {**read_labels(deck), **given}
+        names = collect(deck, labels)
+        log(f"{LABEL}: {len(names)} items")
+        log_items(deck, labels)
+        return [("epigraph",
+                 epigraph_requests(deck, extra.get("epigraph"))),
+                ("labels", label_requests(deck, given)),
                 (LABEL, toc_requests(deck, names))]
 
     return plan
@@ -148,7 +245,7 @@ def main():
     step = start("Update the table of contents")
     extra = load_json(step.args.json) if step.args.json else {}
     sent = W.run_plan(step.slides, step.deck_id,
-                      plan_for(extra.get("epigraph")), LABEL)
+                      plan_for(extra), LABEL)
     if sent > 0:
         log(f"{LABEL}: updated ({sent} requests)")
 

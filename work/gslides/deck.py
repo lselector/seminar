@@ -57,6 +57,7 @@ TITLE_BAND = L.BAND_TOP - 0.06
 
 KIND_TEXT = "text"
 KIND_IMAGE = "image"
+KIND_TABLE = "table"
 KIND_OTHER = "other"
 
 # Placeholder hints written by g1_new_deck.py. A box whose
@@ -88,6 +89,9 @@ class Shape:
     size_emu: tuple = (0, 0)
     transform: dict = field(default_factory=dict)
     size_pt: float = 0.0
+    cells: list = field(default_factory=list)
+    styles: list = field(default_factory=list)
+    description: str = ""
 
     # --------------------------------------
     def paragraphs(self):
@@ -206,6 +210,21 @@ class Deck:
 
 
 # --------------------------------------------------------------
+def marked_picture(page, mark):
+    """Id of the picture whose alt text carries mark, or "".
+
+    A picture you added yourself has no mark, so a step
+    that refreshes a chart on a hand-made slide can never
+    mistake it for the chart.
+    """
+    for shape in page.shapes:
+        if shape.kind == KIND_IMAGE and \
+                mark.lower() in shape.description.lower():
+            return shape.id
+    return ""
+
+
+# --------------------------------------------------------------
 def is_title(shape):
     """Is this box a slide title rather than content?
 
@@ -278,6 +297,31 @@ def main_font_size(shape_json):
 
 
 # --------------------------------------------------------------
+def paragraph_styles(shape_json):
+    """(size, bold) most of each paragraph is set in."""
+    styles, weight = [], {}
+    for piece in shape_json.get("text", {}).get(
+            "textElements", []):
+        run = piece.get("textRun")
+        if not run:
+            continue
+        style = run.get("style", {})
+        key = (style.get("fontSize", {}).get("magnitude") or 12,
+               bool(style.get("bold")))
+        parts = run.get("content", "").split("\n")
+        for index, part in enumerate(parts):
+            if index:
+                styles.append(max(weight, key=weight.get)
+                              if weight else key)
+                weight = {}
+            if part:
+                weight[key] = weight.get(key, 0) + len(part)
+    if weight:
+        styles.append(max(weight, key=weight.get))
+    return styles
+
+
+# --------------------------------------------------------------
 def is_filled(shape_json):
     """Does a shape have a background fill of its own?"""
     props = shape_json.get("shapeProperties", {})
@@ -299,6 +343,7 @@ def parse_element(element, slide_id):
     size = element.get("size", {})
     shape = Shape(
         id=element["objectId"], slide=slide_id,
+        description=element.get("description", ""),
         kind=KIND_OTHER, rect=element_rect(element),
         size_emu=(to_inches(size.get("width")) * EMU_PER_INCH,
                   to_inches(size.get("height")) * EMU_PER_INCH),
@@ -309,8 +354,15 @@ def parse_element(element, slide_id):
         shape.text = text_of(element["shape"])
         shape.filled = is_filled(element["shape"])
         shape.size_pt = main_font_size(element["shape"])
+        shape.styles = paragraph_styles(element["shape"])
     elif "image" in element:
         shape.kind = KIND_IMAGE
+    elif "table" in element:
+        shape.kind = KIND_TABLE
+        shape.cells = [
+            [text_of(cell) for cell in row.get("tableCells", [])]
+            for row in element["table"].get("tableRows", [])
+        ]
     return [shape]
 
 

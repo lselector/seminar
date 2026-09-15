@@ -95,8 +95,9 @@ skipped topic to get it past the check.
 python3 g3_update_toc.py
 ```
 
-If the epigraph is still a placeholder, see the
-`gslides-update-toc` skill for writing one.
+Then give each new topic a short one-line label, and write
+the epigraph if it is still a placeholder. Both are in the
+`gslides-update-toc` skill.
 
 ## Step 7: report
 

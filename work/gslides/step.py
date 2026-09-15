@@ -120,7 +120,7 @@ def report_frozen(deck, ids, label):
 
 
 # --------------------------------------------------------------
-def host_pictures(step, specs):
+def host_pictures(step, specs, allow=()):
     """Prepare and upload the pictures that may change.
 
     specs maps a picture id to how to get it, such as
@@ -133,7 +133,8 @@ def host_pictures(step, specs):
     urls = {}
     for image_id, spec in specs.items():
         shape = deck.shape(image_id)
-        if not shape or not deck.editable(shape):
+        if not shape or not (deck.editable(shape)
+                             or image_id in allow):
             log(f"  picture {image_id}: left alone")
             continue
         log(f"  picture {image_id}: fetching")
@@ -147,12 +148,12 @@ def host_pictures(step, specs):
 
 
 # --------------------------------------------------------------
-def with_pictures(step, specs, make_plan, label):
+def with_pictures(step, specs, make_plan, label, allow=()):
     """Host pictures, run the plan, and always clean up."""
-    urls, host, folder = host_pictures(step, specs)
+    urls, host, folder = host_pictures(step, specs, allow)
     try:
         return W.run_plan(step.slides, step.deck_id,
-                          make_plan(urls), label)
+                          make_plan(urls), label, allow=allow)
     finally:
         host.clean()
         remove_workdir(folder)
