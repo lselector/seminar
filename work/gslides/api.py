@@ -10,12 +10,12 @@ Google Slides pages are 10 x 5.625 inches, so every
 rectangle deck_layout computes is used as it is, converted
 to EMU (914400 per inch).
 
-Two things do not carry over. Slides has no equivalent of
-PowerPoint's per-paragraph bullet glyph with a colour of its
-own, so bullets are written as a literal coloured character
-at the start of the line. And text is addressed by index
-range rather than by run, so a box is built by inserting all
-of its text at once and then styling spans of it.
+Two things do not carry over. A Slides bullet has no colour
+of its own: the glyph takes the style of the first character
+of its line (probed 2026-09-16), so bullets are real list
+bullets in the colour of the text. And text is addressed by
+index range rather than by run, so a box is built by
+inserting all of its text at once and then styling spans.
 
 Usage:
     from gslides.api import textbox, insert_text, style_span
@@ -24,7 +24,7 @@ Usage:
     reqs += style_span("box1", 0, 5, size=12, bold=True)
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-16
 """
 
 EMU_PER_INCH = 914400
@@ -168,8 +168,28 @@ def style_span(box_id, start, end, size=None, bold=False,
 
 
 # --------------------------------------------------------------
-def hanging_indent(box_id, start, end, indent=0.1875):
-    """Line up a wrapped bullet under its first word."""
+def bullets(box_id, start, end):
+    """Make the paragraphs in a range a bulleted list."""
+    if end <= start:
+        return []
+    return [{"createParagraphBullets": {
+        "objectId": box_id,
+        "textRange": {"type": "FIXED_RANGE",
+                      "startIndex": start,
+                      "endIndex": end},
+        "bulletPreset": "BULLET_DISC_CIRCLE_SQUARE",
+    }}]
+
+
+# --------------------------------------------------------------
+def hanging_indent(box_id, start, end, indent=0.1875,
+                   glyph=0.06):
+    """Line up a wrapped bullet under its first word.
+
+    glyph is where the list bullet sits. Slides draws the dot
+    just left of that point, so 0.06in lines it up with the
+    headline above (rendered 2026-09-16).
+    """
     if end <= start:
         return []
     return [{"updateParagraphStyle": {
@@ -180,7 +200,7 @@ def hanging_indent(box_id, start, end, indent=0.1875):
         "style": {
             "indentStart": {"magnitude": emu(indent),
                             "unit": "EMU"},
-            "indentFirstLine": {"magnitude": 0,
+            "indentFirstLine": {"magnitude": emu(glyph),
                                 "unit": "EMU"},
             "spaceAbove": {"magnitude": 0, "unit": "PT"},
             "spaceBelow": {"magnitude": 0, "unit": "PT"},
