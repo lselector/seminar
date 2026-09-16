@@ -18,7 +18,7 @@ Usage:
     python3 -m tests.test_gsteps
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-16
 """
 
 import copy
@@ -216,17 +216,34 @@ def test_toc_labels_are_kept_in_the_toc_notes():
 
 # --------------------------------------------------------------
 def test_toc_is_a_bold_blue_bulleted_list():
-    """Every item has a dot and is bold blue."""
+    """Every item is a real list bullet and bold blue."""
     reqs = R.render_toc_columns("s-toc", "s-toc",
                                 ["One", "Two", "Three"], 1.0)
     texts = [r["insertText"]["text"] for r in reqs
              if "insertText" in r]
-    assert all(line.startswith(R.BULLET)
-               for t in texts for line in t.split("\n")), texts
+    assert not any(line.startswith(R.BULLET.strip())
+                   for t in texts for line in t.split("\n"))
+    listed = [r for r in reqs if "createParagraphBullets" in r]
+    assert len(listed) == 3
     styles = [r["updateTextStyle"]["style"] for r in reqs
               if "updateTextStyle" in r]
     assert styles and all(s.get("bold") for s in styles)
     assert len(texts) == 2
+
+
+# --------------------------------------------------------------
+def test_news_bullets_are_a_real_list():
+    """Fact lines get list bullets; headline and link do not."""
+    block = Block("Head", bullets=["One **fact**", "Two",
+                                   "https://example.com"])
+    item = L.Item(block, 12, L.Rect(0, 0, 4, 2))
+    body = R.block_body(item)
+    assert "●" not in body.text
+    reqs = R.write_body("b1", body)
+    listed = [r["createParagraphBullets"]["textRange"]
+              for r in reqs if "createParagraphBullets" in r]
+    starts = [len("Head\n"), len("Head\nOne fact\n")]
+    assert [t["startIndex"] for t in listed] == starts
 
 
 # --------------------------------------------------------------

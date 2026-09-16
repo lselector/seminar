@@ -30,7 +30,7 @@ Usage:
                           fill=None, locate=my_locator)
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-16
 """
 
 import os
@@ -53,6 +53,9 @@ CODE_BLUE = (0x3C, 0x78, 0xD8)
 YELLOW = (0xFF, 0xF2, 0xCC)
 GREY = (0x59, 0x59, 0x59)
 
+# Real list bullets carry no text. BULLET stands in for the
+# glyph when measuring a contents line, and is what decks
+# written before 2026-09-16 have typed at a line's start.
 BULLET = "● "
 TOC_BLUE = (0x44, 0x72, 0xC4)
 TOC_COLUMNS = 2
@@ -145,15 +148,12 @@ def add_headline(body, item):
 
 # --------------------------------------------------------------
 def add_bullet(body, text, item, dotted):
-    """Write one body line, with or without its dot."""
+    """Write one body line, as a list bullet or plain."""
     if is_link(text):
         body.run(text, size=L.link_size(item.size),
                  colour=BLUE, font=FONT, link=text)
         body.end_line()
         return
-    if dotted:
-        body.run(BULLET, size=item.size, colour=RED,
-                 font=FONT)
     for chunk, style in split_markup(text):
         body.run(chunk, **piece_style(style, item.size))
     body.end_line(bullet=dotted)
@@ -185,6 +185,7 @@ def write_body(box_id, body, centred=False):
     for start, end, bullet in body.lines:
         stop = min(end, limit)
         if bullet:
+            reqs += S.bullets(box_id, start, stop)
             reqs += S.hanging_indent(box_id, start, stop)
         else:
             reqs += S.tighten(box_id, start, stop)
@@ -455,7 +456,6 @@ def render_toc_columns(slide_id, tag, names, top, fill=YELLOW):
     for index, column in enumerate(columns):
         body = Body()
         for name in column:
-            body.run(BULLET, **style)
             body.run(name, **style)
             body.end_line(bullet=True)
         rect = toc_column_rect(index, len(columns), column,

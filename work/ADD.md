@@ -319,8 +319,11 @@ rectangles; the author never positions anything.
 Geometry (inches): slide 10 x 5.625, margin 0.09, content
 band 0.46 to 5.53, text column 6.10 beside a 3.60 picture
 column. Titles Calibri 20 bold; headlines red bold; bullets
-Calibri 12 with a red dot and hanging indent; code Consolas 9
-blue; links 9 pt blue.
+Calibri 12 as a real bulleted list with a hanging indent;
+code Consolas 9 blue; links 9 pt blue. A Slides bullet takes
+the colour and size of the first character on its line, so
+news bullets are black and contents bullets blue. Decks
+written before 2026-09-16 have a typed red dot instead.
 
 **Slides-specific corrections**, all measured:
 
