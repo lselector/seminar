@@ -31,6 +31,7 @@ import g3_update_toc as TOC
 import g4_update_bench as BENCH
 import g5_update_aa_index as AA
 import g6_update_youtube as YT
+from gslides import bench as BK
 import g7_update_layoffs as LAY
 from sources import layoffs as LAYSRC
 from layout import deck_layout as L
@@ -437,6 +438,63 @@ def test_bench_hand_page_uses_the_site_cutoff_date():
         {"g_t_en", "g_t_co", "g_date"}
 
 
+# --------------------------------------------------------------
+def test_the_benchmarks_page_is_found_by_its_tables():
+    """Your table page wins; else the script's s-bench."""
+    assert BK.board_page(hand_bench_deck()).id == "g_bench"
+    assert [t.id for t in BK.board_tables(
+        hand_bench_deck().slide("g_bench"))] == \
+        ["g_t_en", "g_t_co"]
+    assert BK.board_page(skeleton()).id == T.PAGE_BENCH
+
+
+# --------------------------------------------------------------
+def test_the_new_deck_copies_the_latest_earlier_deck():
+    """Only a deck from before the new date counts."""
+    def deck_file(fid, day, made="2026-01-01"):
+        """A Drive listing entry with its date tag."""
+        return {"id": fid, "createdTime": made,
+                "appProperties": {G.DATE_KEY: day}}
+    files = [deck_file("a", "2026-09-11"),
+             deck_file("b", "2026-09-18", "2026-09-14"),
+             deck_file("b2", "2026-09-18", "2026-09-15"),
+             deck_file("c", "2026-09-25"),
+             deck_file("d", "2026-10-02"),
+             {"id": "e", "appProperties": {}},
+             {"id": "f"}]
+    pick = G.latest_before(files, dt.date(2026, 9, 25))
+    assert pick["id"] == "b2"
+    assert G.latest_before(files, dt.date(2026, 9, 11)) is None
+
+
+# --------------------------------------------------------------
+def test_the_copy_keeps_the_authors_pages_draws_the_rest():
+    """Other slides go; kept ones return to 2, 3, 5, 7."""
+    import g1_new_deck as G1
+    deck = hand_bench_deck()
+    reqs = G1.only_pages(deck, ["g_bench"])
+    assert [W.target(r) for r in reqs] == ["s-toc"]
+    assert G1.carried_pages(deck) == {"bench": "g_bench"}
+    assert G1.carried_pages(lived()) == {
+        "bench": T.PAGE_BENCH, "aa_index": T.PAGE_AA,
+        "youtube": T.PAGE_YOUTUBE, "layoffs": T.PAGE_LAYOFFS}
+    kept = {"bench": "g_bench", "aa_index": "g_aa",
+            "youtube": "g_yt", "layoffs": "g_lay"}
+    pages = G1.build_pages("AI News - Sept 25, 2026",
+                           lambda path: "https://x/" + path,
+                           skip=kept)
+    ids = [sid for sid, _ in pages]
+    assert len(ids) == 7
+    for gone in (T.PAGE_BENCH, T.PAGE_AA, T.PAGE_YOUTUBE,
+                 T.PAGE_LAYOFFS):
+        assert gone not in ids
+    order = G1.final_order(ids, kept)
+    assert order[1:3] == ["g_bench", "g_aa"]
+    assert order[4] == "g_yt" and order[6] == "g_lay"
+    assert order.index("g_lay") + 1 == \
+        order.index(T.PAGE_ABOUT) and len(order) == 11
+
+
 FYI_TEXT = ("  Tech Layoffs by year (US only):\n"
             "128.5K in 2026 (as of Sept 10, 2026)\n"
             "124K in 2025 \n153K in 2024\n264K in 2023\n"
@@ -755,6 +813,22 @@ def test_skeleton_json_builds_the_eleven_slides_in_order():
         assert T.shape_id(key, T.BOX) in made, key
     assert T.shape_id(T.TOPIC_ABOUT, T.PICTURE) in made
 
+
+# --------------------------------------------------------------
+def test_deck_text_covers_the_talk_and_skips_parked():
+    """Titles and box text of the talk; nothing parked."""
+    import g9_deck_text as TXT
+    deck = lived()
+    text = TXT.deck_text(deck)
+    heads = [l for l in text.splitlines()
+             if l.startswith("## Slide")]
+    assert len(heads) == len(deck.main()), heads
+    assert "## Slide 2: " in text
+    assert len(deck.slides) > len(deck.main())
+    first = deck.main()[0]
+    assert TXT.slide_text(first, 1).startswith("## Slide 1")
+    assert TXT.split_out(["2026-09-25", "--out", "x.md"]) == \
+        ("x.md", ["2026-09-25"])
 
 # --------------------------------------------------------------
 if __name__ == "__main__":

@@ -232,6 +232,39 @@ def test_seminar_date_rules():
 
 
 # --------------------------------------------------------------
+def test_the_week_switches_at_3pm_eastern_on_friday():
+    """Friday morning is this week; Friday evening is next."""
+    east = G.EASTERN
+    utc = dt.timezone.utc
+    friday = dt.date(2026, 9, 18)
+    after = dt.date(2026, 9, 25)
+
+    # --------------------------------------
+    def at(hour, minute=0, tz=east, day=friday):
+        """A moment on that day, in a time zone."""
+        return dt.datetime.combine(
+            day, dt.time(hour, minute), tzinfo=tz)
+
+    assert G.seminar_date(None, at(9)) == friday
+    assert G.seminar_date(None, at(14, 59)) == friday
+    assert G.seminar_date(None, at(15)) == after
+    assert G.seminar_date(None, at(21)) == after
+    # 18:30 UTC is 14:30 EDT; 19:00 UTC is 15:00 EDT.
+    assert G.seminar_date(None, at(18, 30, utc)) == friday
+    assert G.seminar_date(None, at(19, 0, utc)) == after
+    # In winter (EST) 15:00 Eastern is 20:00 UTC.
+    winter = dt.date(2026, 12, 4)
+    assert G.seminar_date(None, at(19, 59, utc, winter)) \
+        == winter
+    assert G.seminar_date(None, at(20, 0, utc, winter)) \
+        == dt.date(2026, 12, 11)
+    saturday = at(8, day=dt.date(2026, 9, 19))
+    assert G.seminar_date(None, saturday) == after
+    # A date named on the command line always wins.
+    assert G.seminar_date("2026-09-18", at(21)) == friday
+
+
+# --------------------------------------------------------------
 def test_deck_title_and_name_match_the_archive():
     """The archive's month spellings are kept."""
     date = dt.date(2026, 9, 18)

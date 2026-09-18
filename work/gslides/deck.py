@@ -32,11 +32,12 @@ Usage:
         print(shape.id, deck.editable(shape))
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-18
 """
 
 import datetime as dt
 from dataclasses import dataclass, field
+from zoneinfo import ZoneInfo
 
 from layout import deck_layout as L
 from gslides import ids as T
@@ -47,6 +48,10 @@ DATE_KEY = "seminarDate"
 DECK_MIME = "application/vnd.google-apps.presentation"
 
 FRIDAY = 4
+# The seminar ends on Friday afternoon. From this hour on a
+# Friday, US Eastern time, the steps work on next week's deck.
+EASTERN = ZoneInfo("America/New_York")
+SWITCH_HOUR = 15
 MONTHS = [
     "Jan", "Feb", "March", "April", "May", "June",
     "July", "Aug", "Sept", "Oct", "Nov", "Dec",
@@ -237,6 +242,21 @@ def is_title(shape):
 
 
 # --------------------------------------------------------------
+def titled_page(deck, slide_id, title):
+    """A slide in the talk, by its fixed id or by its title."""
+    page = deck.slide(slide_id)
+    if page and page.index < deck.separator():
+        return page
+    want = title.lower()
+    for slide in deck.main():
+        for shape in slide.text_shapes():
+            if is_title(shape) and \
+                    shape.first_line().lower() == want:
+                return slide
+    return None
+
+
+# --------------------------------------------------------------
 def to_inches(dimension):
     """One API dimension in inches."""
     if not dimension:
@@ -403,19 +423,39 @@ def read_deck(slides, deck_id):
 
 
 # --------------------------------------------------------------
-def next_friday(today=None):
-    """The coming Friday, or today if it is one."""
-    today = today or dt.date.today()
-    return today + dt.timedelta(
-        days=(FRIDAY - today.weekday()) % 7)
+def eastern_now(now=None):
+    """now as a US Eastern datetime; a bare date is midnight."""
+    if now is None:
+        return dt.datetime.now(EASTERN)
+    if not isinstance(now, dt.datetime):
+        return dt.datetime.combine(now, dt.time(),
+                                   tzinfo=EASTERN)
+    if now.tzinfo is None:
+        return now.replace(tzinfo=EASTERN)
+    return now.astimezone(EASTERN)
 
 
 # --------------------------------------------------------------
-def seminar_date(text=None, today=None):
-    """The date given as YYYY-MM-DD, else the next Friday."""
+def next_friday(now=None):
+    """The Friday the steps work on.
+
+    Today on a Friday before 3 pm US Eastern (the seminar
+    has not ended); from 3 pm on, the Friday after. Any
+    other day, the coming Friday.
+    """
+    now = eastern_now(now)
+    days = (FRIDAY - now.weekday()) % 7
+    if days == 0 and now.hour >= SWITCH_HOUR:
+        days = 7
+    return now.date() + dt.timedelta(days=days)
+
+
+# --------------------------------------------------------------
+def seminar_date(text=None, now=None):
+    """The date given as YYYY-MM-DD, else next_friday."""
     if text:
         return dt.date.fromisoformat(text)
-    return next_friday(today)
+    return next_friday(now)
 
 
 # --------------------------------------------------------------
@@ -442,3 +482,30 @@ def find_decks(drive, date):
         fields="files(id,name,webViewLink,createdTime)",
     ).execute()
     return got.get("files", [])
+
+
+# --------------------------------------------------------------
+def latest_before(files, date):
+    """Of dated deck files, the newest seminar before date."""
+    dated = []
+    for item in files:
+        text = item.get("appProperties", {}).get(DATE_KEY, "")
+        try:
+            day = dt.date.fromisoformat(text)
+        except ValueError:
+            continue
+        if day < date:
+            dated.append((day, item.get("createdTime", ""),
+                          item))
+    return max(dated, key=lambda d: d[:2])[2] if dated else None
+
+
+# --------------------------------------------------------------
+def find_previous_deck(drive, date):
+    """The deck of the latest seminar before date, or None."""
+    got = drive.files().list(
+        q=f"mimeType='{DECK_MIME}' and trashed=false",
+        pageSize=1000,
+        fields="files(id,name,appProperties,createdTime)",
+    ).execute()
+    return latest_before(got.get("files", []), date)

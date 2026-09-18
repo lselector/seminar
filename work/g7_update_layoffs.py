@@ -143,15 +143,7 @@ def topic_requests(deck, key, block, urls):
 # --------------------------------------------------------------
 def find_page(deck):
     """The layoffs slide in the talk, by id or by title."""
-    page = deck.slide(T.PAGE_LAYOFFS)
-    if page and page.index < deck.separator():
-        return page
-    for slide in deck.main():
-        for shape in slide.text_shapes():
-            if G.is_title(shape) and shape.first_line().lower() \
-                    == HEADLINE.lower():
-                return slide
-    return None
+    return G.titled_page(deck, T.PAGE_LAYOFFS, HEADLINE)
 
 
 # --------------------------------------------------------------

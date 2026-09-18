@@ -71,8 +71,12 @@ and the source URLs live in `config/gslides.json`.
 ## The weekly routine
 
 Run these from `work/`. Every command takes an optional date
-(`2026-09-18`); without one it works on the next Friday, or
-today when today is Friday.
+(`2026-09-18`). Without one it works on this week's seminar:
+the coming Friday, which on a Friday is today until 3 pm US
+Eastern time, when the seminar is over. From 3 pm on Friday
+every step moves to the next week's deck, so Friday evening
+work lands in the next deck. Pass a date to reach any other
+deck, for example today's after 3 pm.
 
 | Step | Command | Skill |
 |---|---|---|
@@ -84,6 +88,7 @@ today when today is Friday.
 | 6. YouTube counts | `python3 g6_update_youtube.py` | `/gslides-update-youtube` |
 | 7. Layoffs | `python3 g7_update_layoffs.py --json lay.json` | `/gslides-update-layoffs` |
 | Before presenting | `python3 g8_preflight.py` | |
+| Deck text, epigraph ideas | `python3 g9_deck_text.py --out deck.md` | `/gslides-epigraphs` |
 
 Steps 2 to 7 can run in any order, as often as you like.
 Running one twice either refreshes it or does nothing. Steps
@@ -111,16 +116,33 @@ speaker notes; a headline with no label is cut to fit.
 | # | Slide | Filled by |
 |---|---|---|
 | 1 | Title, contents, epigraph | Step 3 |
-| 2 | Benchmarks | Step 4 |
-| 3 | Artificial Analysis Intelligence Index | Step 5 |
+| 2 | Benchmarks: a copy of last week's page 2 (see below) | Step 4 |
+| 3 | Artificial Analysis Intelligence Index: a copy of last week's page 3 (see below) | Step 5 |
 | 4 | AI News (placeholder) | Step 2 |
-| 5 | Weekly videos every Friday | Step 6 |
+| 5 | Weekly videos every Friday: a copy of last week's page 5 (see below) | Step 6 |
 | 6 | AI News (placeholder) | Step 2 |
-| 7 | Jobs and Layoffs | Step 7 |
+| 7 | Jobs and Layoffs: a copy of last week's page 7 (see below) | Step 7 |
 | 8 | About the Speaker | fixed |
 | 9 | Thank You! | fixed |
 | 10 | Not in the presentation | never touched |
 | 11 | Parked topics | never touched |
+
+Pages 2, 3, 5 and 7 are your own designs. Page 2 has two
+Code | Model | Score tables, the captions, legend, Elo note
+and model sizes; page 3 has your notes, the date box and the
+chart marked `auto: aa-index-chart`; page 5 has your promo
+box and channel screenshots; page 7 has your TrueUp and
+layoffs.fyi boxes and the two charts marked
+`auto: trueup-chart` and `auto: layoffs-fyi-chart`. Step 1
+makes each new deck as a Drive copy of the latest earlier
+deck, deletes every slide but those four, and draws the rest
+around them (the Slides API cannot draw a table that
+compact). So whatever you change on those pages this week
+carries into next week's deck, alt text marks included.
+Steps 4 to 7 then put this week's numbers, dates and charts
+in; on page 5 that is the counts line only, and your
+screenshots stay as you placed them. Only a deck with no
+earlier deck to copy gets the script's plain versions.
 
 News goes onto slides 4 and 6 first. Further news slides are
 inserted just before Jobs and Layoffs, wherever that slide
@@ -200,7 +222,7 @@ one job and a `README.md` of its own.
 
 ```
 work/
-  g1_new_deck.py ... g8_preflight.py   the commands you run
+  g1_new_deck.py ... g9_deck_text.py   the commands you run
   g_auth.py                            one-time Google sign-in
   README.md, ADD.md                    this guide, the design
 

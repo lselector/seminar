@@ -6,6 +6,10 @@ description: Refresh the Artificial Analysis Intelligence Index slide of the liv
 # Update the Intelligence Index slide
 
 Run from `work/`. The rules are in `work/README.md`.
+Without a date the step works on this week's deck: on a
+Friday that is today's until 3 pm US Eastern (the seminar
+is over), then next week's. Say which deck the log names.
+If the user names a date, pass it to every command.
 
 ## Chart and date
 
@@ -19,6 +23,13 @@ https://artificialanalysis.ai/evaluations/artificial-analysis-intelligence-index
 and swaps it into the picture frame. A box on the slide that
 holds only a date (`Sept 10`) is set to today's date in the
 same style.
+
+Page 3 is the author's own design: the title, a notes box
+with the page link, a date box and the chart marked
+`auto: aa-index-chart`. `g1_new_deck.py` gives every new
+deck a copy of last week's page 3, mark included, so this
+is the slide the step normally finds; its chart and date
+are last week's until this step runs.
 
 The slide is found by its title, so it works on the
 author's hand-made slide too. There it changes only the date

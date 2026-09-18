@@ -360,3 +360,12 @@ def cell_colour(table_id, row, column, colour):
 def delete_object(object_id):
     """Remove one object, such as the starting slide."""
     return [{"deleteObject": {"objectId": object_id}}]
+
+
+# --------------------------------------------------------------
+def move_slide(slide_id, index):
+    """Put one slide at a place in the deck, 0 first."""
+    return [{"updateSlidesPosition": {
+        "slideObjectIds": [slide_id],
+        "insertionIndex": index,
+    }}]

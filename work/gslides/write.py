@@ -197,17 +197,29 @@ def refresh_text(deck, box_id, body, fit=True):
 
 # --------------------------------------------------------------
 def refresh_picture(deck, image_id, url, allow=()):
-    """Swap a picture's content, keeping its frame."""
+    """Swap a picture's content, keeping its frame.
+
+    replaceImage clears the picture's alt text, and the alt
+    text description is how a hand-placed chart is found
+    (auto: ...). So the description is written back, or the
+    mark would be gone after the first refresh.
+    """
     shape = deck.shape(image_id)
     if not shape or not url:
         return []
     if not (deck.editable(shape) or image_id in allow):
         return []
-    return [{"replaceImage": {
+    reqs = [{"replaceImage": {
         "imageObjectId": image_id,
         "url": url,
         "imageReplaceMethod": "CENTER_INSIDE",
     }}]
+    if shape.description:
+        reqs.append({"updatePageElementAltText": {
+            "objectId": image_id,
+            "description": shape.description,
+        }})
+    return reqs
 
 
 # --------------------------------------------------------------

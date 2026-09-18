@@ -6,8 +6,18 @@ description: Refresh the Jobs and Layoffs slide of the live Google Slides semina
 # Update the layoffs slide
 
 Run from `work/`. The rules are in `work/README.md`.
+Without a date the step works on this week's deck: on a
+Friday that is today's until 3 pm US Eastern (the seminar
+is over), then next week's. Say which deck the log names.
+If the user names a date, pass it to every command.
 
 ## Hand-made slide (the usual case)
+
+The author's own layoffs slide: a TrueUp box, a layoffs.fyi
+box and two charts. `g1_new_deck.py` gives every new deck a
+copy of last week's slide, alt text marks included, so this
+is the slide step 7 normally finds; its numbers and charts
+are last week's until this step runs.
 
 ```bash
 python3 g7_update_layoffs.py          # or: ... 2026-09-25
@@ -43,7 +53,10 @@ Report the numbers now shown and anything that stayed old.
 
 ## Script-made topics (t-layoffs-fyi, t-trueup)
 
-Only when the slide still has the script's own boxes. Read
+Only in a deck made with no earlier deck to copy, when the
+slide still has the script's own boxes. There the charts
+are shot in headless Chrome, which TrueUp's bot check
+usually blocks, so its old picture stays. Read
 both pages (WebFetch) and pass the words as JSON:
 
 ```json

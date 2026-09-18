@@ -19,10 +19,13 @@ Run every command from `work/`.
 python3 g1_new_deck.py            # or: g1_new_deck.py 2026-09-25
 ```
 
-It creates the deck for the next Friday (today, on a Friday)
-or prints the link of the one that already exists. It never
-replaces a deck, so it is always safe to run. Use the same
-date argument in every later command if the user named one.
+It creates the deck for this week's Friday or prints the
+link of the one that already exists. On a Friday that is
+today's deck until 3 pm US Eastern, when the seminar ends,
+and next week's from then on; every later step follows the
+same rule. It never replaces a deck, so it is always safe to
+run. Use the same date argument in every later command if
+the user named one.
 
 ## Step 2: see what the deck already knows
 

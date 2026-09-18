@@ -350,6 +350,29 @@ searchable, nothing to crop. It is plain paragraphs, not a
 table, because an earlier PPTX table could not be made short
 enough. `g4` rebuilds only when the cutoff changes.
 
+That column page is now only the fallback. The author's own
+page 2 uses two real tables (26 rows of 10.5 pt, 8 pt
+Calibri, red 0.75 pt borders) plus a legend, an Elo note and
+a list of model sizes. The Slides API cannot draw that table:
+it has no cell padding setting, so API-made rows are too tall
+and 25 of them spill off the slide. So `g1` copies the design
+instead of drawing it: it makes the new deck with
+`drive.files().copy` of the latest earlier deck
+(`deck.find_previous_deck`), deletes every slide but the
+benchmarks page (`gslides/bench.py` finds it by its Code |
+Model | Score tables), and the Intelligence Index, YouTube
+and layoffs pages (by id or title, `deck.titled_page`),
+draws the other pages around them and moves them to places
+2, 3, 5 and 7. Those pages are the author's too; their charts are
+found only by alt text marks, which travel with the copy,
+and on the YouTube page only the counts line is rewritten. `g4` fills those tables in place, as it
+always did for a hand-made page. Rejected: redrawing the
+tables through the API (no cell padding control, so rows
+come out too tall), and a
+separate template file (a second thing to keep in step with
+the author's edits; copying last week's deck carries them
+forward on its own).
+
 **Intelligence Index: a screenshot**, because it is a live
 chart. `g5` retakes it; bullets change only when a skill
 supplies them.

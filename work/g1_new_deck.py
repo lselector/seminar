@@ -6,16 +6,30 @@ Builds the eleven-page skeleton described in ADD.md in the
 folder named in config/gslides.json:
 
      1 s-toc        title, TOC and epigraph placeholders
-     2 s-bench      benchmarks, from leaderboard.json
-     3 s-aa-index   Artificial Analysis Intelligence Index
+     2 (copied)     benchmarks, last week's page 2 *
+     3 (copied)     Intelligence Index, last week's page *
      4 s-news-1     "AI News" with one placeholder box
-     5 s-youtube    the channel promo
+     5 (copied)     the channel promo, last week's page *
      6 s-news-2     "AI News" with one placeholder box
-     7 s-layoffs    Layoffs.fyi and TrueUp
+     7 (copied)     jobs and layoffs, last week's page *
      8 s-about      About the Speaker
      9 s-thanks     Thank You!
     10 s-separator  everything after this is left out
     11 s-parked     where rejected topics go
+
+* Pages 2, 3, 5 and 7 are the author's designs. Page 2 has
+two Code | Model | Score tables, captions, legend, the Elo
+note and the model sizes; the Slides API cannot draw a table
+that compact (it cannot set cell padding). Page 3 has the
+author's notes, a date box and the chart marked
+auto: aa-index-chart. Page 5 has the author's promo box and
+channel screenshots. Page 7 has the author's layoffs.fyi and
+TrueUp boxes and two marked charts. So the new deck starts
+as a Drive copy of the latest earlier deck with every slide
+but those four deleted; the other pages are drawn around
+them, and steps 4 to 7 put this week's numbers, dates and
+charts in. With no earlier deck, they are the script's own
+pages: s-bench, s-aa-index, s-youtube and s-layoffs.
 
 The wording of pages 3, 5, 7, 8 and 9 comes from
 config/skeleton.json, the one place that text lives.
@@ -31,11 +45,14 @@ If a deck for that date already exists, this stops and
 prints its link: it never replaces a deck.
 
 Usage:
-    python3 g1_new_deck.py              next Friday
+    python3 g1_new_deck.py              this week's Friday *
     python3 g1_new_deck.py 2026-09-25   a given date
 
+* Today on a Friday until 3 pm US Eastern, when the
+  seminar ends; from then on, the Friday after.
+
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-18
 """
 
 import json
@@ -45,6 +62,7 @@ import sys
 from layout import bench_page as B
 from layout import deck_layout as L
 from layout import skeleton as K
+from gslides import bench as BK
 from gslides import deck as G
 from gslides import render as R
 from gslides import api as S
@@ -71,6 +89,13 @@ NEWS_PAGES = [(T.PAGE_NEWS_1, T.TOPIC_NEWS_1),
 # Pages 3 to 9, in order, after contents and benchmarks.
 MIDDLE = ["aa_index", NEWS_PAGES[0], "youtube",
           NEWS_PAGES[1], "layoffs", "about", "thanks"]
+
+# The author's own pages carried over from last week's deck,
+# found by fixed id or by title, and the drawn page each one
+# goes in front of. Page 2 is found by its tables instead.
+TITLED = [("aa_index", T.PAGE_AA, T.PAGE_NEWS_1),
+          ("youtube", T.PAGE_YOUTUBE, T.PAGE_NEWS_2),
+          ("layoffs", T.PAGE_LAYOFFS, T.PAGE_ABOUT)]
 
 NEWS_TITLE = "AI News"
 SEPARATOR_TITLE = "Not in the presentation"
@@ -167,14 +192,20 @@ def closing_pages():
 
 
 # --------------------------------------------------------------
-def build_pages(title, locate):
-    """Every skeleton page as (slide id, requests)."""
+def build_pages(title, locate, skip=()):
+    """Every skeleton page as (slide id, requests).
+
+    skip names pages ("bench", "aa_index", "youtube",
+    "layoffs") copied from last week's deck, not drawn.
+    """
     static = K.load()
-    pages = [toc_page(title), bench_page()]
+    pages = [toc_page(title)]
+    if "bench" not in skip:
+        pages.append(bench_page())
     for entry in MIDDLE:
         if isinstance(entry, tuple):
             pages.append(news_page(*entry))
-        else:
+        elif entry not in skip:
             pages.append(fixed_page(entry, static[entry],
                                     locate))
     return pages + closing_pages()
@@ -193,30 +224,115 @@ def create_file(drive, date, folder):
 
 
 # --------------------------------------------------------------
+def carried_pages(deck):
+    """Last week's pages to keep, as {key: slide id}."""
+    found = {}
+    bench = BK.board_page(deck)
+    if bench:
+        found["bench"] = bench.id
+    for key, slide_id, _ in TITLED:
+        title = K.page(key)["title"]
+        page = G.titled_page(deck, slide_id, title)
+        if page:
+            found[key] = page.id
+    return found
+
+
+# --------------------------------------------------------------
+def only_pages(deck, keep_ids):
+    """Requests that delete every slide but the kept ones."""
+    reqs = []
+    for slide in deck.slides:
+        if slide.id not in keep_ids:
+            reqs += S.delete_object(slide.id)
+    return reqs
+
+
+# --------------------------------------------------------------
+def copy_previous(drive, slides, date, folder):
+    """Start from last week's deck, keeping its own pages.
+
+    Returns (deck id, link, {key: slide id}), or None when
+    there is no earlier deck or it has neither page. The
+    copy keeps the author's tables, boxes, charts, alt text
+    marks and styles exactly; steps 4 and 7 then put this
+    week's numbers in.
+    """
+    prev = G.find_previous_deck(drive, date)
+    if not prev:
+        return None
+    made = drive.files().copy(fileId=prev["id"], body={
+        "name": G.deck_name(date),
+        "parents": [folder],
+        "appProperties": {G.DATE_KEY: date.isoformat()},
+    }, fields="id, webViewLink").execute()
+    deck = G.read_deck(slides, made["id"])
+    kept = carried_pages(deck)
+    if not kept:
+        drive.files().delete(fileId=made["id"]).execute()
+        log(f"  {prev['name']} has no page to carry over")
+        return None
+    slides.presentations().batchUpdate(
+        presentationId=made["id"],
+        body={"requests": only_pages(deck, kept.values())},
+    ).execute()
+    log(f"  copied {', '.join(kept)} from {prev['name']}")
+    return made["id"], made.get("webViewLink", ""), kept
+
+
+# --------------------------------------------------------------
 def send_pages(slides, deck_id, pages):
-    """One batch per page, each slide at its place."""
+    """One batch per drawn page, in order."""
     for index, (sid, reqs) in enumerate(pages):
         head = S.new_slide(sid)
         head[0]["createSlide"]["insertionIndex"] = index
         slides.presentations().batchUpdate(
             presentationId=deck_id,
             body={"requests": head + reqs}).execute()
-        log(f"  {index + 1:2d} {sid}")
+        log(f"  drew {sid}")
 
 
 # --------------------------------------------------------------
-def drop_blank_start(slides, deck_id, pages):
-    """Remove the blank slide Drive puts in a new deck."""
-    ours = {sid for sid, _ in pages}
+def final_order(page_ids, kept):
+    """Drawn pages with the carried ones back in place."""
+    order = list(page_ids)
+    if "bench" in kept:
+        order.insert(1, kept["bench"])
+    for key, _, before in TITLED:
+        if key in kept:
+            order.insert(order.index(before), kept[key])
+    return order
+
+
+# --------------------------------------------------------------
+def arrange(slides, deck_id, order):
+    """Drop the blank start slide; put every slide in place.
+
+    Moving each slide to its index, front to back, leaves
+    the deck in exactly this order.
+    """
     deck = G.read_deck(slides, deck_id)
-    extra = [s.id for s in deck.slides if s.id not in ours]
     reqs = []
-    for slide_id in extra:
-        reqs += S.delete_object(slide_id)
-    if reqs:
-        slides.presentations().batchUpdate(
-            presentationId=deck_id,
-            body={"requests": reqs}).execute()
+    for slide in deck.slides:
+        if slide.id not in order:
+            reqs += S.delete_object(slide.id)
+    for index, slide_id in enumerate(order):
+        reqs += S.move_slide(slide_id, index)
+    slides.presentations().batchUpdate(
+        presentationId=deck_id,
+        body={"requests": reqs}).execute()
+    for index, slide_id in enumerate(order):
+        log(f"  {index + 1:2d} {slide_id}")
+
+
+# --------------------------------------------------------------
+def start_deck(drive, slides, date, folder):
+    """The new file: last week's carried pages, else empty."""
+    copied = copy_previous(drive, slides, date, folder)
+    if copied:
+        return copied
+    deck_id, link = create_file(drive, date, folder)
+    return deck_id, link, {}
 
 
 # --------------------------------------------------------------
@@ -240,17 +356,23 @@ def main():
     folder = settings()["folder_id"]
     refuse_if_exists(drive, date)
 
-    deck_id, link = create_file(drive, date, folder)
+    deck_id, link, kept = start_deck(drive, slides, date,
+                                     folder)
     log(f"Created {G.deck_name(date)}")
     host = Host(drive, folder)
     try:
-        pages = build_pages(G.deck_title(date), host.put)
+        pages = build_pages(G.deck_title(date), host.put,
+                            skip=kept)
         send_pages(slides, deck_id, pages)
-        drop_blank_start(slides, deck_id, pages)
+        order = final_order([sid for sid, _ in pages], kept)
+        arrange(slides, deck_id, order)
     finally:
         host.clean()
     log("=" * 50)
-    log(f"Deck ready: {len(pages)} slides")
+    log(f"Deck ready: {len(order)} slides")
+    if kept:
+        log("Copied pages still show last week's numbers: run "
+            "g4, g5, g6 and g7")
     log(link)
 
 

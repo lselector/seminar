@@ -29,12 +29,12 @@ The epigraph is written only while its box still holds its
 placeholder.
 
 Usage:
-    python3 g3_update_toc.py                  next Friday
+    python3 g3_update_toc.py                  this week's Friday
     python3 g3_update_toc.py 2026-09-18
     python3 g3_update_toc.py --json toc.json  labels, epigraph
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-18
 """
 
 import re
