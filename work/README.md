@@ -25,7 +25,7 @@ next week's news words it differently.
 
 **3. Your own boxes are always yours.** Anything you add by
 hand, including a copy of a script box, belongs to you. No
-script changes it or removes it. Three exceptions, by
+script changes it or removes it. Four exceptions, by
 request, even if you made the shapes:
 
 - Intelligence Index slide: step 5 replaces the chart
@@ -36,6 +36,11 @@ request, even if you made the shapes:
 - Jobs and Layoffs slide: step 7 updates the numbers and
   date in the TrueUp and layoffs.fyi boxes and replaces the
   two chart pictures.
+- YouTube slide: step 6 rewrites the one line holding
+  `subscribers`, in whichever box on that slide holds it,
+  filled or not. The rest of that box is left alone, and if
+  the promo box is gone the step draws it again from
+  `config/skeleton.json`.
 
 **Pictures you add are never deleted or replaced**, on any
 slide. A script replaces a picture you placed only when its
@@ -126,7 +131,7 @@ is at the time. If you put anything of your own on slide 4 or
 
 | You did this | What scripts do |
 |---|---|
-| Filled a box | Never change it or its picture |
+| Filled a box | Never change it or its picture, apart from the four by-request exceptions above |
 | Typed in an unfilled script box | May overwrite it on the next run. Fill it to keep it |
 | Added your own box or slide | Never touch it |
 | Copied a script box | The copy is yours |

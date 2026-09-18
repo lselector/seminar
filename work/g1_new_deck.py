@@ -44,18 +44,17 @@ import sys
 
 from layout import bench_page as B
 from layout import deck_layout as L
+from layout import skeleton as K
 from gslides import deck as G
 from gslides import render as R
 from gslides import api as S
 from gslides import ids as T
-from layout.deck_parser import Block, Section
 from gslides.client import (
-    CONFIG_DIR, DATA_DIR, ROOT, log, services, settings,
+    DATA_DIR, ROOT, log, services, settings,
 )
 from gslides.host import Host
 
 LEADERBOARD = os.path.join(DATA_DIR, "leaderboard.json")
-SKELETON = os.path.join(CONFIG_DIR, "skeleton.json")
 
 # config/skeleton.json entry -> fixed page id and topic keys.
 FIXED_PAGES = {
@@ -138,31 +137,10 @@ def news_page(sid, key):
 
 
 # --------------------------------------------------------------
-def to_section(entry):
-    """One config/skeleton.json page as a Section of Blocks.
-
-    A page kind (promo, profile, closing) is set on the
-    section and on each of its blocks, as the layout reads
-    it from both.
-    """
-    flags = {entry["kind"]: True} if entry.get("kind") else {}
-    blocks = []
-    for topic in entry["topics"]:
-        image = topic.get("image")
-        blocks.append(Block(
-            headline=topic["headline"],
-            bullets=list(topic["bullets"]),
-            image=os.path.join(ROOT, image) if image else None,
-            **flags))
-    return Section(title=entry["title"], blocks=blocks,
-                   **flags)
-
-
-# --------------------------------------------------------------
 def fixed_page(name, entry, locate):
     """Pages 3, 5, 7, 8, 9: from config/skeleton.json."""
     sid, keys = FIXED_PAGES[name]
-    pages = L.paginate([to_section(entry)])
+    pages = L.paginate([K.section(entry, ROOT)])
     if not pages:
         return sid, R.render_title(sid, sid, entry["title"])
     return sid, R.render_content(sid, sid, pages[0], keys,
@@ -189,16 +167,9 @@ def closing_pages():
 
 
 # --------------------------------------------------------------
-def load_skeleton():
-    """The static wording of the standing pages."""
-    with open(SKELETON, encoding="utf-8") as handle:
-        return json.load(handle)
-
-
-# --------------------------------------------------------------
 def build_pages(title, locate):
     """Every skeleton page as (slide id, requests)."""
-    static = load_skeleton()
+    static = K.load()
     pages = [toc_page(title), bench_page()]
     for entry in MIDDLE:
         if isinstance(entry, tuple):
