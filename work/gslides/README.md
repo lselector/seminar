@@ -5,7 +5,8 @@ Everything that touches a live Google Slides deck.
 | Module | Owns | Public API |
 |---|---|---|
 | `client.py` | sign-in, settings, project paths | `services()`, `settings()`, `log()`, `ROOT`, `CONFIG_DIR`, `DATA_DIR` |
-| `deck.py` | read model and ownership rules | `read_deck()`, `parse_deck()`, `Deck.editable()`, `find_decks()`, `seminar_date()` |
+| `deck.py` | read model and ownership rules | `read_deck()`, `parse_deck()`, `Deck.editable()`, `find_decks()`, `find_previous_deck()`, `seminar_date()` |
+| `bench.py` | finds the benchmarks page by its Code \| Model \| Score tables | `board_page()`, `board_tables()`, `table_page()`, `is_board_table()` |
 | `write.py` | safe writes | `run_plan()`, `refresh_text()`, `refresh_topic()`, `refresh_picture()`, `replace_line()`, `replace_owned()`, `guard()` |
 | `render.py` | content to Slides requests | `render_content()`, `render_bench()`, `render_toc_columns()`, `Body`, `make_box()` |
 | `api.py` | single request dictionaries | `textbox()`, `insert_text()`, `style_span()`, `picture()`, ... |

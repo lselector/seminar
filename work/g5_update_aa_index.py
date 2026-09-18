@@ -72,16 +72,7 @@ class Target:
 # --------------------------------------------------------------
 def find_page(deck):
     """The Intelligence Index slide in the talk, or None."""
-    page = deck.slide(T.PAGE_AA)
-    if page and page.index < deck.separator():
-        return page
-    want = HEADLINE.lower()
-    for slide in deck.main():
-        for shape in slide.text_shapes():
-            if G.is_title(shape) and \
-                    shape.first_line().lower() == want:
-                return slide
-    return None
+    return G.titled_page(deck, T.PAGE_AA, HEADLINE)
 
 
 # --------------------------------------------------------------

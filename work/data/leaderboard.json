@@ -1,5 +1,5 @@
 {
-  "fetched": "2026-09-14",
+  "fetched": "2026-09-18",
   "boards": [
     {
       "label": "English",
@@ -7,10 +7,10 @@
       "cutoff": "2026-09-13",
       "entries": [
         {
-          "name": "claude-fable-5",
+          "name": "claude-fable-5-high",
           "score": 1506,
           "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-fable-5"
+          "url": "https://arena.ai/leaderboard/model/claude-fable-5-high"
         },
         {
           "name": "claude-opus-4-6-high",
@@ -164,10 +164,10 @@
       "cutoff": "2026-09-13",
       "entries": [
         {
-          "name": "claude-fable-5",
+          "name": "claude-fable-5-high",
           "score": 1552,
           "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-fable-5"
+          "url": "https://arena.ai/leaderboard/model/claude-fable-5-high"
         },
         {
           "name": "claude-opus-4-7-high",

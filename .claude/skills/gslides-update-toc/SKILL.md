@@ -6,6 +6,10 @@ description: Rebuild the table of contents on the first slide of the live Google
 # Update the contents and epigraph
 
 Run from `work/`. The rules are in `work/README.md`.
+Without a date the step works on this week's deck: on a
+Friday that is today's until 3 pm US Eastern (the seminar
+is over), then next week's. Say which deck the log names.
+If the user names a date, pass it to every command.
 
 ## Contents
 
@@ -82,6 +86,9 @@ no exclamation marks; attribute any quote. Follow the
 
 Offer it to the user as a suggestion. Once it is written the
 script never replaces it, so they can change it by hand.
+
+For a list of 30 candidates to choose from, written to
+`work/epigraphs.txt`, use the `gslides-epigraphs` skill.
 
 ## Report
 

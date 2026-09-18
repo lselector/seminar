@@ -25,7 +25,7 @@ Usage:
     python3 g6_update_youtube.py --json counts.json
 
 Created: 2026-09-14
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 """
 
 import re
@@ -85,16 +85,8 @@ def counts_line(counts):
 # --------------------------------------------------------------
 def find_page(deck):
     """The channel slide in the talk, or None."""
-    page = deck.slide(T.PAGE_YOUTUBE)
-    if page and page.index < deck.separator():
-        return page
-    want = K.page(PAGE_KEY)["title"].lower()
-    for slide in deck.main():
-        for shape in slide.text_shapes():
-            if G.is_title(shape) and \
-                    shape.first_line().lower() == want:
-                return slide
-    return None
+    return G.titled_page(deck, T.PAGE_YOUTUBE,
+                         K.page(PAGE_KEY)["title"])
 
 
 # --------------------------------------------------------------

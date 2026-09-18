@@ -80,6 +80,21 @@ def test_refresh_picture_follows_the_box():
 
 
 # --------------------------------------------------------------
+def test_refresh_picture_keeps_the_alt_text_mark():
+    """replaceImage wipes alt text; the mark is written back."""
+    deck = G.parse_deck(raw())
+    pic = deck.shape("t-aa-index-p")
+    assert [list(r)[0] for r in W.refresh_picture(
+        deck, pic.id, "https://x")] == ["replaceImage"]
+    pic.description = "auto: aa-index-chart"
+    reqs = W.refresh_picture(deck, pic.id, "https://x")
+    assert list(reqs[0]) == ["replaceImage"]
+    alt = reqs[1]["updatePageElementAltText"]
+    assert alt["objectId"] == pic.id
+    assert alt["description"] == "auto: aa-index-chart"
+
+
+# --------------------------------------------------------------
 def test_replace_owned_rebuilds_editable_shapes():
     """Existing editable shapes are deleted, then recreated."""
     deck = G.parse_deck(raw())

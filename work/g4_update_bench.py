@@ -21,13 +21,13 @@ Nothing else on that slide is touched: fonts, row heights,
 the legend and your notes all stay.
 
 Usage:
-    python3 g4_update_bench.py                 next Friday
+    python3 g4_update_bench.py                 this week's Friday
     python3 g4_update_bench.py 2026-09-18
     python3 g4_update_bench.py --force         rebuild anyway
     python3 g4_update_bench.py --no-fetch      use cached JSON
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-18
 """
 
 import datetime as dt
@@ -38,6 +38,7 @@ import sys
 
 from layout import bench_page as B
 from gslides import api as S
+from gslides import bench as K
 from gslides import deck as G
 from gslides import render as R
 from gslides import write as W
@@ -48,7 +49,6 @@ from gslides.step import page_or_stop, report_frozen, start
 LEADERBOARD = os.path.join(DATA_DIR, "leaderboard.json")
 DATE_BOX = T.shape_id(T.PAGE_BENCH, "date")
 LABEL = "benchmarks"
-HEADER = ["code", "model", "score"]
 
 # The hand-made tables use a lighter grey for other vendors.
 TABLE_COLORS = {**B.VENDOR_COLORS, "other": (0xD9, 0xD9, 0xD9)}
@@ -85,20 +85,9 @@ def cutoff_day(boards):
 
 
 # --------------------------------------------------------------
-def is_board_table(shape):
-    """A table whose header row is Code | Model | Score."""
-    if shape.kind != G.KIND_TABLE or not shape.cells:
-        return False
-    head = [c.strip().lower() for c in shape.cells[0][:3]]
-    return head == HEADER
-
-
-# --------------------------------------------------------------
 def pair_tables(page, boards):
     """Match each board to the table under its caption."""
-    tables = sorted((s for s in page.shapes
-                     if is_board_table(s)),
-                    key=lambda s: s.rect.x)
+    tables = K.board_tables(page)
     pairs = []
     for index, board in enumerate(boards[:len(tables)]):
         word = board.get("label", "").lower()
@@ -111,15 +100,6 @@ def pair_tables(page, boards):
             table = min(tables, key=lambda t: abs(t.rect.x - x))
         pairs.append((table, board))
     return pairs
-
-
-# --------------------------------------------------------------
-def find_hand_page(deck):
-    """A slide in the talk holding board tables, or None."""
-    for slide in deck.main():
-        if any(is_board_table(s) for s in slide.shapes):
-            return slide
-    return None
 
 
 # --------------------------------------------------------------
@@ -162,7 +142,7 @@ def table_requests(table, board):
 # --------------------------------------------------------------
 def hand_requests(deck, boards):
     """Fill the hand-made tables and date; [] if current."""
-    page = find_hand_page(deck)
+    page = K.table_page(deck)
     if not page:
         return []
     reqs = []
@@ -177,10 +157,10 @@ def hand_requests(deck, boards):
 # --------------------------------------------------------------
 def allowed_ids(deck):
     """The hand-made tables and date box this step may change."""
-    page = find_hand_page(deck)
+    page = K.table_page(deck)
     if not page or deck.slide(T.PAGE_BENCH):
         return ()
-    ids = [s.id for s in page.shapes if is_board_table(s)]
+    ids = [s.id for s in K.board_tables(page)]
     box = find_date_box(page)
     return tuple(ids + ([box.id] if box else []))
 
@@ -211,7 +191,7 @@ def plan_for(data, force):
         boards = data["boards"][:2]
         if deck.slide(T.PAGE_BENCH):
             return [(LABEL, script_requests(deck, data, force))]
-        if not find_hand_page(deck):
+        if not K.table_page(deck):
             log(f"{LABEL}: no Benchmarks slide in the talk")
             return []
         reqs = hand_requests(deck, boards)

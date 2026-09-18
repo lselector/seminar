@@ -5,7 +5,10 @@ The shared start of every update step (g2 to g8).
 Each step takes the same arguments and has to find the same
 deck before it can do anything, so that lives here:
 
-    [YYYY-MM-DD]     seminar date, default next Friday
+    [YYYY-MM-DD]     seminar date; default the coming
+                     Friday, which on a Friday is today
+                     until 3 pm US Eastern, then next
+                     week's (deck.next_friday)
     --deck ID        use this presentation id directly
     --json FILE      content prepared by a skill
     --force          refresh even if nothing looks new
@@ -16,7 +19,7 @@ Usage:
     step.drive, step.slides, step.deck_id, step.args
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-18
 """
 
 import argparse
