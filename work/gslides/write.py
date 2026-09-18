@@ -271,15 +271,18 @@ def refresh_topic(deck, key, block, url=None):
 
 
 # --------------------------------------------------------------
-def replace_line(deck, box_id, marker, new_line):
+def replace_line(deck, box_id, marker, new_line, allow=()):
     """Swap the one line of a box that contains marker.
 
     Only that line changes; the rest of the box, and the
     style of the line itself, stay as they are. The box
-    height follows the change.
+    height follows the change. A box in allow is rewritten
+    even when a human has filled it: the step was told to
+    keep that one line current.
     """
     shape = deck.shape(box_id)
-    if not shape or not deck.editable(shape):
+    if not shape or not (deck.editable(shape)
+                         or box_id in allow):
         return []
     lines = shape.text.split("\n")
     start = 0

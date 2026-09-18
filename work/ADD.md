@@ -357,7 +357,14 @@ supplies them.
 **YouTube: one line.** `g6` reads subscriber and video counts
 from the channel page and replaces only the line containing
 `subscribers`, so the rest of the promo wording is the
-author's.
+author's. Stale counts are worse than a lost fill, so that
+one line is a by-request exception: `g6` writes it into
+whichever box on the slide holds it, the script's or the
+author's, filled or not. If no box holds it and the script's
+box is gone, `g6` draws the box again from
+`config/skeleton.json`, since `g1` never touches a deck that
+already exists. The wording lives in `layout/skeleton.py`,
+which `g1` and `g6` both read.
 
 **Layoffs: two independent topics.** `g7` refreshes the
 Layoffs.fyi and TrueUp boxes separately, so freezing one

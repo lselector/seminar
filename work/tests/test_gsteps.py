@@ -30,6 +30,7 @@ import g2_add_news as NEWS
 import g3_update_toc as TOC
 import g4_update_bench as BENCH
 import g5_update_aa_index as AA
+import g6_update_youtube as YT
 import g7_update_layoffs as LAY
 from sources import layoffs as LAYSRC
 from layout import deck_layout as L
@@ -572,6 +573,65 @@ def test_replace_line_changes_one_line_only():
     assert reqs[1]["insertText"]["insertionIndex"] == start
     assert W.replace_line(deck, "t-youtube-b", "subscribers",
                           "7.51K subscribers, 337 videos") == []
+
+
+# --------------------------------------------------------------
+def youtube_deck():
+    """The lived-in deck and its channel slide."""
+    deck = lived()
+    return deck, deck.slide(T.PAGE_YOUTUBE)
+
+
+# --------------------------------------------------------------
+def test_a_filled_counts_box_still_gets_the_new_counts():
+    """The counts line is the one thing a fill cannot stop."""
+    deck, _ = youtube_deck()
+    box = deck.shape("t-youtube-b")
+    box.filled = True
+    assert W.replace_line(deck, box.id, "subscribers",
+                          "9.99K subscribers, 400 videos") == []
+    reqs = W.replace_line(deck, box.id, "subscribers",
+                          "9.99K subscribers, 400 videos",
+                          (box.id,))
+    assert reqs and "deleteText" in reqs[0]
+
+
+# --------------------------------------------------------------
+def test_the_counts_box_you_made_yourself_is_found():
+    """A hand-made promo box is the one step 6 writes to."""
+    deck, page = youtube_deck()
+    page.shapes = [s for s in page.shapes
+                   if s.id != "t-youtube-b"]
+    mine = G.Shape(id="g_promo", slide=page.id,
+                   kind=G.KIND_TEXT, filled=True,
+                   text="Weekly videos every Friday\n"
+                        "7.51K subscribers, 337 videos",
+                   rect=L.Rect(1, 2, 4, 1))
+    page.shapes.append(mine)
+    found = YT.locate(deck)
+    assert found.box.id == "g_promo"
+    assert found.allow == ("g_promo",)
+    reqs = YT.counts_reqs(deck, found,
+                          "7.52K subscribers, 339 videos")
+    assert reqs and W.target(reqs[0]) == "g_promo"
+
+
+# --------------------------------------------------------------
+def test_a_deleted_promo_box_is_drawn_again():
+    """Step 6 heals the slide from config/skeleton.json."""
+    deck, page = youtube_deck()
+    page.shapes = [s for s in page.shapes
+                   if s.id != "t-youtube-b"]
+    found = YT.locate(deck)
+    assert found.box is None and found.allow == ()
+    line = "7.52K subscribers, 339 videos"
+    reqs = YT.counts_reqs(deck, found, line)
+    made = [W.target(r) for r in reqs if "createShape" in r]
+    assert made == ["t-youtube-b"], made
+    written = "".join(r["insertText"]["text"] for r in reqs
+                      if "insertText" in r)
+    assert line in written
+    assert "https://www.youtube.com/@lev-selector" in written
 
 
 # --------------------------------------------------------------

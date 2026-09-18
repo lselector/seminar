@@ -8,5 +8,6 @@ Pure content and geometry. No network, no Google.
 | `deck_layout.py` | pagination, font ladder, every rectangle (`paginate`, `Rect`, constants) |
 | `text_metrics.py` | how wide text renders in Calibri (`text_width`) |
 | `bench_page.py` | benchmark page sizes, vendor colours, cutoff note |
+| `skeleton.py` | the standing wording of the fixed pages, read from `config/skeleton.json` (`load`, `page`, `section`) |
 
 Depends on nothing else in the project.
