@@ -63,6 +63,17 @@ TOC_SIZE = 14
 EPIGRAPH_SIZE = 18
 EPIGRAPH_X = 5.90
 TOC_GAP = 0.14
+# The contents is four boxes, two a side, each its own tint:
+# left upper, left lower, right upper, right lower.
+LIGHT_GREEN = (0xE2, 0xF0, 0xD9)
+LIGHT_BLUE = (0xDE, 0xEB, 0xF7)
+TOC_FILLS = [YELLOW, LIGHT_GREEN, LIGHT_BLUE, YELLOW]
+TOC_STACK_GAP = 0.10
+# Each contents box holds 8 to 12 lines: as many as fit its
+# side of the slide. An empty box shows TOC_EMPTY.
+TOC_BOX_MIN = 8
+TOC_BOX_MAX = 12
+TOC_EMPTY = "xxx"
 
 # Google Slides pads text away from the box edge by 0.10in
 # left and right and 0.05in top and bottom, and the API has
@@ -463,6 +474,68 @@ def render_toc_columns(slide_id, tag, names, top, fill=YELLOW):
         box = T.shape_id(tag, f"c{index}")
         reqs += make_box(box, slide_id, rect, True, fill)
         reqs += write_body(box, body)
+    return reqs
+
+
+# --------------------------------------------------------------
+def toc_capacity(top, boxes=2):
+    """Lines one box holds when a side starts at top."""
+    line = L.points_to_inches(TOC_SIZE * L.LINE_RATIO)
+    room = (L.BAND_BOT - top - TOC_STACK_GAP * (boxes - 1))
+    fits = int((room / boxes - 0.06) // line)
+    return max(TOC_BOX_MIN, min(TOC_BOX_MAX, fits))
+
+
+# --------------------------------------------------------------
+def toc_quarters(names, capacities):
+    """Items in slide order, filling each box before the next.
+
+    Boxes go left upper, left lower, right upper, right
+    lower. Anything past the last box's share still goes in
+    the last box, so no item is ever dropped.
+    """
+    parts, rest = [], list(names)
+    for index, cap in enumerate(capacities):
+        last = index == len(capacities) - 1
+        parts.append(rest if last else rest[:cap])
+        rest = [] if last else rest[cap:]
+    return parts
+
+
+# --------------------------------------------------------------
+def toc_body(names):
+    """The bold blue bulleted lines of one contents box."""
+    body = Body()
+    for name in names:
+        body.run(name, size=TOC_SIZE, colour=TOC_BLUE,
+                 bold=True, font=FONT)
+        body.end_line(bullet=True)
+    return body
+
+
+# --------------------------------------------------------------
+def render_toc_boxes(slide_id, tag, names, tops):
+    """Draw the contents as four tinted boxes, two a side.
+
+    tops is (left, right): where each side starts, so the
+    right side can sit below the epigraph. Box c0 is left
+    upper, c1 left lower, c2 right upper, c3 right lower,
+    each filled with its colour from TOC_FILLS. Items run in
+    slide order and fill each box (8 to 12 lines, as many as
+    fit that side) before the next; an empty box says xxx.
+    """
+    reqs = []
+    y = list(tops)
+    caps = [toc_capacity(top) for top in tops for _ in (0, 1)]
+    for index, part in enumerate(toc_quarters(names, caps)):
+        part = part or [TOC_EMPTY]
+        side = index // 2
+        rect = toc_column_rect(side, TOC_COLUMNS, part, y[side])
+        y[side] = rect.y + rect.h + TOC_STACK_GAP
+        box = T.shape_id(tag, f"c{index}")
+        reqs += make_box(box, slide_id, rect, True,
+                         TOC_FILLS[index])
+        reqs += write_body(box, toc_body(part))
     return reqs
 
 

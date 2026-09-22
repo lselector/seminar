@@ -1,30 +1,33 @@
-My agent called the cable company. The cable company blinked first.
-Six terabytes of intelligence, deployed against a $200 phone bill.
-The future of AI is you, not on hold.
-First they wrote our emails. Now they haggle with AT&T.
-Muse waits on hold so you can wait for something better.
-The smartest thing in the room this week was on hold with Xfinity.
-Hand an agent your passwords and it hands you back an evening.
-A $40 monthly discount: small step for a user, giant leap for agents.
-Benchmarks show who is smartest. Phone bills show who is useful.
-Seventeen Elo points between first and tenth. Photo finish.
-Every model is number one on some chart. Pick your chart.
-Elo starts at 1000. The bragging starts right after.
-Models now ship by the terabyte. Opinions still ship by the ton.
-Claude Fable-5 on top again. Leaderboards love a sequel.
-Intelligence keeps getting cheaper. Customer service music does not.
-Cost per task: the only benchmark your CFO reads.
-Frontier models, household chores. The glamour is in the savings.
-Your next support call will be two bots being very polite.
-The agent negotiated, you saved. Somebody finally read the fine print.
-An assistant that shops, calls and haggles. Your grandmother approves.
-Delegation used to need a manager. Now it needs a login.
-The robots took the most hated job first: waiting on hold.
-Muse browses Marketplace so you never have to ask "is this available?"
-Habit check-ins from an agent: the gym buddy who never skips.
-Ad-free feeds, cheaper bills, shorter calls. Small miracles, weekly.
-The chart goes up and to the right. The price goes down and away.
-Every Friday a new video. Every week a new number one.
-Pause the video. Answer the question. Outthink the leaderboard.
-Layoffs count people. This deck counts on them to keep learning.
-Big models, small errands. That is how revolutions start.
+Claude now runs a quarter of the lab that makes Claude.
+Anthropic's AI does 26% of Anthropic's homework.
+30,000 agents at work, and 1 in 47,000 told to stop.
+Every safety number this week was graded by the student.
+Amodei says pace it, Huang says ship it. Both say trust us.
+The slowdown debate has two speeds: cautious and Nvidia.
+
+A model that cannot write just judged 500 evals for 34 cents.
+Jev cannot spell. It decides, and it decides for pennies.
+Six clones in two days. Imitation trains faster than models.
+Your agent's bill is not the model. It is the harness.
+
+Same model, same task, five times the price. Blame the harness.
+A 54 GB model went on a diet and came back as 5.9.
+Ternary weights: minus one, zero, plus one, and your laptop.
+Claude broke into OpenAI, politely, for a $6,500 bounty.
+
+Fourteen hours from report to patch. The break-in took less.
+Meta's agent called Xfinity and came back $40 richer.
+The family agent has its own Google account and your calendar.
+Six people, one agent, no more arguments about the calendar.
+Protein modeling got 4x faster and a million in credits.
+Dream-RSI: 162x fewer agent calls, the rest rehearsed offline.
+The cheapest frontier model this week was free and anonymous.
+Open weights, 256K context, no bill. Someone is buying attention.
+Bolt offers 50x more runs if open models do the typing.
+Translation lag fell to 2.3 seconds. Small talk still lags.
+Sixty languages in, twenty-nine out. The accent costs extra.
+OpenClaw tests the update on a copy of you before touching you.
+4,179 pull requests, 502 people, one update that rolls back.
+Agents got a heads-up display. The human kept the off switch.
+The user charts need a wider axis every quarter now.
+Everything sped up this week except the argument about speed.
