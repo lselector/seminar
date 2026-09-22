@@ -15,7 +15,8 @@ behind it and the reasons are in `ADD.md`.
 red border and no background. Give a box any background
 colour and no script will touch it again, or its picture.
 This is how you accept a topic: edit it if you like, then
-fill it yellow.
+fill it yellow. The one exception is the contents on slide 1,
+which the script colours itself (see below).
 
 **2. The separator slide is a wall.** Slide 10 says "Not in
 the presentation". Nothing after it is ever written. To drop
@@ -105,8 +106,17 @@ exactly its text's height. A box a script only edits (a
 number, a date, one line) grows or shrinks by what the edit
 did to the text, so the padding you set by hand stays.
 
-The contents on slide 1 is a bold blue bulleted list in two
-columns, one short line per topic, no links. Step 3 takes
+The contents on slide 1 is a bold blue bulleted list, one
+short line per topic, no links, in four boxes two a side:
+left upper light yellow, left lower light green, right upper
+light blue, right lower light yellow. Items follow the
+slides in order and fill one box before moving to the next,
+in that order; each box takes 8 to 12 lines, as many as fit,
+and an empty box shows `xxx`. The right side starts below
+the epigraph so they never overlap. Because the script
+paints those colours, a fill does not freeze them: give any
+contents box a different colour, or clear its fill, and the
+whole contents is yours. Step 3 takes
 short labels in `toc.json` (`{"toc": {headline: label}}`,
 `"-"` leaves a line out) and keeps them in that slide's
 speaker notes; a headline with no label is cut to fit.
@@ -161,7 +171,7 @@ is at the time. If you put anything of your own on slide 4 or
 | Reordered slides | Follow the new order: the contents list it, news goes before layoffs wherever it is |
 | Parked a topic | Never add it again |
 | Deleted a topic outright | Never add it again (the ledger remembers) |
-| Filled one contents column | Leave the whole contents alone |
+| Recoloured a contents box, or cleared its fill | Leave the whole contents alone |
 | Wrote your own epigraph | Keep it |
 | Deleted a fixed slide | That step reports it and does nothing |
 

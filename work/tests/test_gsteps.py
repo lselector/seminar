@@ -37,6 +37,7 @@ from sources import layoffs as LAYSRC
 from layout import deck_layout as L
 import g8_preflight as CHECK
 from gslides import deck as G
+from gslides import api as S
 from gslides import render as R
 from gslides import write as W
 from gslides import ids as T
@@ -175,6 +176,38 @@ def test_toc_follows_the_current_slide_order():
 
 
 # --------------------------------------------------------------
+def test_toc_counts_a_box_just_under_a_hand_made_title():
+    """Below the title's bottom is content; beside it is not."""
+    def box(oid, y, h, text):
+        """A hand-made text box on the test slide."""
+        return G.Shape(id=oid, slide="g_aa", kind=G.KIND_TEXT,
+                       text=text, rect=L.Rect(0.1, y, 4, h))
+    shapes = [box("g_title", 0.002, 0.35, "Intelligence Index"),
+              box("g_note", 0.05, 0.3, "Starting Elo = 1000"),
+              box("g_notes", 0.388, 0.5, "Intelligence Index")]
+    slides = [G.Slide(id="s-toc", index=0),
+              G.Slide(id="g_aa", index=1, shapes=shapes)]
+    deck = G.Deck(id="d", title="t", revision="r",
+                  slides=slides)
+    assert TOC.headlines(deck) == ["Intelligence Index"]
+
+# --------------------------------------------------------------
+def test_toc_takes_only_the_captions_from_the_bench_tables():
+    """Model sizes, notes and the date are not topics."""
+    deck = hand_bench_deck()
+    page = deck.slide("g_bench")
+    page.shapes.append(G.Shape(
+        id="g_sizes", slide="g_bench", kind=G.KIND_TEXT,
+        text="Claude Fable-5 - 6TB\nGLM-5.3 - 744B",
+        rect=L.Rect(7.5, 0.6, 2, 2)))
+    link = " - https://lmarena.ai/leaderboard/text"
+    deck.shape("g_en").text = "English" + link
+    deck.shape("g_co").text = "Coding" + link + "/coding"
+    lines = TOC.headlines(deck)
+    assert [l.split(" - ")[0] for l in lines] == \
+        ["English", "Coding"], lines
+
+# --------------------------------------------------------------
 def test_toc_items_fit_one_line_without_links():
     """Links and trailing marks go; long headlines are cut."""
     assert TOC.shorten("English - https://lmarena.ai/x") == \
@@ -219,18 +252,20 @@ def test_toc_labels_are_kept_in_the_toc_notes():
 # --------------------------------------------------------------
 def test_toc_is_a_bold_blue_bulleted_list():
     """Every item is a real list bullet and bold blue."""
-    reqs = R.render_toc_columns("s-toc", "s-toc",
-                                ["One", "Two", "Three"], 1.0)
+    reqs = R.render_toc_boxes("s-toc", "s-toc",
+                              ["One", "Two", "Three"],
+                              (1.0, 1.0))
     texts = [r["insertText"]["text"] for r in reqs
              if "insertText" in r]
     assert not any(line.startswith(R.BULLET.strip())
                    for t in texts for line in t.split("\n"))
     listed = [r for r in reqs if "createParagraphBullets" in r]
-    assert len(listed) == 3
+    assert len(listed) == 3 + 3
     styles = [r["updateTextStyle"]["style"] for r in reqs
               if "updateTextStyle" in r]
     assert styles and all(s.get("bold") for s in styles)
-    assert len(texts) == 2
+    assert texts[0] == "One\nTwo\nThree"
+    assert texts[1:] == [R.TOC_EMPTY] * 3
 
 
 # --------------------------------------------------------------
@@ -257,10 +292,57 @@ def test_toc_includes_human_topics_but_not_parked_ones():
 
 
 # --------------------------------------------------------------
-def test_toc_leaves_a_frozen_contents_alone():
-    """One filled column freezes the whole TOC."""
+def test_toc_leaves_a_recoloured_contents_alone():
+    """A contents box in any colour but its own is yours."""
     deck = lived()
+    c0 = deck.shape("s-toc-c0")
+    assert c0.fill == R.TOC_FILLS[0] and not TOC.is_yours(c0)
+    assert TOC.toc_requests(deck, ["anything"])
+    c0.fill = (0xFF, 0xFF, 0x00)
+    assert TOC.is_yours(c0)
     assert TOC.toc_requests(deck, ["anything"]) == []
+
+
+# --------------------------------------------------------------
+def test_toc_is_four_tinted_boxes_right_side_lower():
+    """c0..c3 in their colours; right side under epigraph."""
+    names = [f"Topic {i}" for i in range(9)]
+    reqs = R.render_toc_boxes("s-toc", "s-toc", names,
+                              (1.0, 2.0))
+    ids = [f"s-toc-c{i}" for i in range(4)]
+    assert W.created(reqs) == ids
+    fills = {r["updateShapeProperties"]["objectId"]:
+             r["updateShapeProperties"]["shapeProperties"]
+             ["shapeBackgroundFill"]["solidFill"]["color"]
+             for r in reqs if "updateShapeProperties" in r}
+    assert [fills[i] for i in ids] == \
+        [S.rgb(c) for c in R.TOC_FILLS]
+    top = {r["createShape"]["objectId"]:
+           r["createShape"]["elementProperties"]["transform"]
+           ["translateY"] / 914400
+           for r in reqs if "createShape" in r}
+    assert top["s-toc-c1"] > top["s-toc-c0"] + 0.1
+    assert top["s-toc-c3"] > top["s-toc-c2"] + 0.1
+    assert top["s-toc-c2"] > top["s-toc-c0"] + 0.9
+
+
+# --------------------------------------------------------------
+def test_toc_fills_each_box_in_slide_order_before_the_next():
+    """8 to 12 lines a box; leftovers go on; empty says xxx."""
+    names = [f"T{i}" for i in range(25)]
+    assert R.toc_capacity(0.46) == 10
+    assert R.toc_capacity(3.0) == R.TOC_BOX_MIN
+    assert R.toc_capacity(-5.0) == R.TOC_BOX_MAX
+    parts = R.toc_quarters(names, [10, 10, 9, 9])
+    assert [len(p) for p in parts] == [10, 10, 5, 0]
+    assert sum(parts, []) == names
+    parts = R.toc_quarters(names, [8, 8, 8, 0])
+    assert [len(p) for p in parts] == [8, 8, 8, 1]
+    reqs = R.render_toc_boxes("s-toc", "s-toc", names[:3],
+                              (0.46, 0.95))
+    texts = [r["insertText"]["text"] for r in reqs
+             if "insertText" in r]
+    assert texts == ["T0\nT1\nT2"] + [R.TOC_EMPTY] * 3
 
 
 # --------------------------------------------------------------

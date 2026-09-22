@@ -21,6 +21,9 @@ The rules, from ADD.md:
 "No fill" is read from shapeBackgroundFill.propertyState.
 The colour is never compared: an unfilled box still reports
 white, so the colour alone cannot tell the two apart.
+The one exception is the contents on slide 1: step 3 fills
+those boxes itself, so it compares their colour (fill) with
+the one it gave them to tell whether the author took over.
 
 Everything here is pure except read_deck and find_deck, so
 the rules can be tested on saved JSON with no network.
@@ -32,7 +35,7 @@ Usage:
         print(shape.id, deck.editable(shape))
 
 Created: 2026-09-14
-Last updated: 2026-09-18
+Last updated: 2026-09-19
 """
 
 import datetime as dt
@@ -90,6 +93,7 @@ class Shape:
     kind: str
     text: str = ""
     filled: bool = False
+    fill: tuple = None
     rect: L.Rect = None
     size_emu: tuple = (0, 0)
     transform: dict = field(default_factory=dict)
@@ -352,6 +356,24 @@ def is_filled(shape_json):
 
 
 # --------------------------------------------------------------
+def fill_colour(shape_json):
+    """A filled shape's solid colour as (r, g, b) 0-255.
+
+    None when the shape has no fill, or a theme colour whose
+    RGB the API does not give.
+    """
+    if not is_filled(shape_json):
+        return None
+    fill = shape_json["shapeProperties"]["shapeBackgroundFill"]
+    rgb = fill.get("solidFill", {}).get("color", {}).get(
+        "rgbColor")
+    if rgb is None:
+        return None
+    return tuple(round(rgb.get(k, 0.0) * 255)
+                 for k in ("red", "green", "blue"))
+
+
+# --------------------------------------------------------------
 def parse_element(element, slide_id):
     """Shapes found in one page element, groups opened."""
     group = element.get("elementGroup")
@@ -373,6 +395,7 @@ def parse_element(element, slide_id):
         shape.kind = KIND_TEXT
         shape.text = text_of(element["shape"])
         shape.filled = is_filled(element["shape"])
+        shape.fill = fill_colour(element["shape"])
         shape.size_pt = main_font_size(element["shape"])
         shape.styles = paragraph_styles(element["shape"])
     elif "image" in element:

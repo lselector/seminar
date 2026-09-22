@@ -93,7 +93,8 @@ def stale_contents(deck):
     for box_id in TOC.column_ids():
         shape = deck.shape(box_id)
         if shape:
-            shown += shape.paragraphs()
+            shown += [p for p in shape.paragraphs()
+                      if p != R.TOC_EMPTY]
     if shown == wanted:
         return []
     return [f"lists {len(shown)}, slides have {len(wanted)}: "

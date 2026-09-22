@@ -22,13 +22,26 @@ the separator, in the current slide order, including boxes
 the author added. Benchmarks, the YouTube page, About and
 Thank You are left out, as in the archive decks.
 
-If the log says `left alone, you filled ...`, the author has
-taken over the contents. Tell them; do not work around it.
+The contents is four boxes, two a side, filled by the
+script: left upper light yellow, left lower light green,
+right upper light blue, right lower light yellow. Items run
+in slide order and fill one box before the next, in that
+order; each box holds 8 to 12 lines (as many as fit its
+side), and an empty box shows `xxx`. The left side starts
+under the title and the right side under the epigraph, so
+they never overlap; when the epigraph is
+written or grows, the right side moves down on the next run.
+
+Because the script paints those colours, a fill is not how
+the author freezes the contents. If the log says `left
+alone, you recoloured ...`, the author gave a contents box
+another colour or cleared its fill and has taken over the
+contents. Tell them; do not work around it.
 
 ### Short labels
 
-The contents is a bold blue bulleted list in two columns.
-Every item must fit on one line and carry no links or
+Every item is bold blue and bulleted, and must fit on one
+line and carry no links or
 details. The log prints each headline and the item it
 became (`item  <=  headline`). A headline without a label is
 cut at a word to fit, which often reads badly, so write a

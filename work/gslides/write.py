@@ -106,17 +106,19 @@ def blocked_ids(deck, ids):
 
 
 # --------------------------------------------------------------
-def replace_owned(deck, slide_id, requests, sweep=True):
+def replace_owned(deck, slide_id, requests, sweep=True,
+                  allow=()):
     """Rebuild a slide's script shapes, sparing frozen ones.
 
     Every shape the requests create is deleted first if it
-    already exists and is editable. A frozen one keeps its
+    already exists and is editable, or is in allow (a script
+    box the script itself filled). A frozen one keeps its
     old self, and every request aimed at it is dropped. With
     sweep, editable script shapes on the slide that the new
     requests no longer create are removed too.
     """
     new_ids = created(requests)
-    blocked = blocked_ids(deck, new_ids)
+    blocked = blocked_ids(deck, new_ids) - set(allow)
     deletes = []
     for object_id in new_ids:
         if deck.shape(object_id) and object_id not in blocked:
