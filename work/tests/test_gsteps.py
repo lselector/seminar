@@ -346,6 +346,26 @@ def test_toc_fills_each_box_in_slide_order_before_the_next():
 
 
 # --------------------------------------------------------------
+def test_toc_font_shrinks_only_as_far_as_needed():
+    """14 pt while it fits, then 13 or 12, never below 12."""
+    tops = (0.46, 0.81)
+    at14 = sum(R.toc_capacities(tops, 14))
+    at12 = sum(R.toc_capacities(tops, 12))
+    assert at12 > at14
+    assert R.toc_size(at14, tops) == 14
+    assert R.toc_size(at14 + 1, tops) in (13, 12)
+    assert R.toc_size(at12, tops) in (13, 12)
+    assert R.toc_size(at12 + 50, tops) == R.TOC_MIN_SIZE
+    names = [f"T{i}" for i in range(at12)]
+    reqs = R.render_toc_boxes("s-toc", "s-toc", names, tops)
+    sizes = {r["updateTextStyle"]["style"]["fontSize"]
+             ["magnitude"] for r in reqs
+             if "fontSize" in r.get("updateTextStyle", {})
+             .get("style", {})}
+    assert sizes == {R.toc_size(at12, tops)}
+
+
+# --------------------------------------------------------------
 def hand_aa_deck(date_filled=False):
     """A talk whose Intelligence Index slide a human rebuilt."""
     sid = "g_hand"

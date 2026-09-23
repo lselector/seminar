@@ -112,7 +112,9 @@ left upper light yellow, left lower light green, right upper
 light blue, right lower light yellow. Items follow the
 slides in order and fill one box before moving to the next,
 in that order; each box takes 8 to 12 lines, as many as fit,
-and an empty box shows `xxx`. The right side starts below
+and an empty box shows `xxx`. The font is 14 pt, dropping
+to 13 or 12 pt when that is what it takes for every item to
+fit on the slide. The right side starts below
 the epigraph so they never overlap. Because the script
 paints those colours, a fill does not freeze them: give any
 contents box a different colour, or clear its fill, and the

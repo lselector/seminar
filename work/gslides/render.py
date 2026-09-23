@@ -59,7 +59,10 @@ GREY = (0x59, 0x59, 0x59)
 BULLET = "● "
 TOC_BLUE = (0x44, 0x72, 0xC4)
 TOC_COLUMNS = 2
+# The contents is set at 14 pt, and steps down to 12 pt when
+# that is what it takes for every item to fit on the slide.
 TOC_SIZE = 14
+TOC_MIN_SIZE = 12
 EPIGRAPH_SIZE = 18
 EPIGRAPH_X = 5.90
 TOC_GAP = 0.14
@@ -446,13 +449,13 @@ def render_epigraph(slide_id, tag, text):
 
 
 # --------------------------------------------------------------
-def toc_column_rect(index, count, column, top):
+def toc_column_rect(index, count, column, top, size=TOC_SIZE):
     """Where one contents column sits and how tall it is."""
     width = toc_column_width(count)
     tall = sum(
-        L.wrapped_lines(BULLET + n, width, TOC_SIZE, bold=True)
+        L.wrapped_lines(BULLET + n, width, size, bold=True)
         for n in column
-    ) * L.points_to_inches(TOC_SIZE * L.LINE_RATIO)
+    ) * L.points_to_inches(size * L.LINE_RATIO)
     return L.Rect(L.MARGIN + index * (width + TOC_GAP), top,
                   width, min(L.BAND_H, tall + 0.06))
 
@@ -478,12 +481,32 @@ def render_toc_columns(slide_id, tag, names, top, fill=YELLOW):
 
 
 # --------------------------------------------------------------
-def toc_capacity(top, boxes=2):
+def toc_capacity(top, boxes=2, size=TOC_SIZE):
     """Lines one box holds when a side starts at top."""
-    line = L.points_to_inches(TOC_SIZE * L.LINE_RATIO)
+    line = L.points_to_inches(size * L.LINE_RATIO)
     room = (L.BAND_BOT - top - TOC_STACK_GAP * (boxes - 1))
     fits = int((room / boxes - 0.06) // line)
     return max(TOC_BOX_MIN, min(TOC_BOX_MAX, fits))
+
+
+# --------------------------------------------------------------
+def toc_capacities(tops, size=TOC_SIZE):
+    """Lines each of the four boxes holds, c0 to c3."""
+    return [toc_capacity(top, size=size)
+            for top in tops for _ in (0, 1)]
+
+
+# --------------------------------------------------------------
+def toc_size(count, tops):
+    """Largest font, 14 down to 12 pt, that fits every item.
+
+    If even 12 pt is too big, 12 pt is used and the last box
+    runs long, as before.
+    """
+    for size in range(TOC_SIZE, TOC_MIN_SIZE, -1):
+        if sum(toc_capacities(tops, size)) >= count:
+            return size
+    return TOC_MIN_SIZE
 
 
 # --------------------------------------------------------------
@@ -503,11 +526,11 @@ def toc_quarters(names, capacities):
 
 
 # --------------------------------------------------------------
-def toc_body(names):
+def toc_body(names, size=TOC_SIZE):
     """The bold blue bulleted lines of one contents box."""
     body = Body()
     for name in names:
-        body.run(name, size=TOC_SIZE, colour=TOC_BLUE,
+        body.run(name, size=size, colour=TOC_BLUE,
                  bold=True, font=FONT)
         body.end_line(bullet=True)
     return body
@@ -523,19 +546,23 @@ def render_toc_boxes(slide_id, tag, names, tops):
     each filled with its colour from TOC_FILLS. Items run in
     slide order and fill each box (8 to 12 lines, as many as
     fit that side) before the next; an empty box says xxx.
+    The font is the largest from 14 down to 12 pt at which
+    every item fits on the slide.
     """
     reqs = []
     y = list(tops)
-    caps = [toc_capacity(top) for top in tops for _ in (0, 1)]
+    size = toc_size(len(names), tops)
+    caps = toc_capacities(tops, size)
     for index, part in enumerate(toc_quarters(names, caps)):
         part = part or [TOC_EMPTY]
         side = index // 2
-        rect = toc_column_rect(side, TOC_COLUMNS, part, y[side])
+        rect = toc_column_rect(side, TOC_COLUMNS, part, y[side],
+                               size)
         y[side] = rect.y + rect.h + TOC_STACK_GAP
         box = T.shape_id(tag, f"c{index}")
         reqs += make_box(box, slide_id, rect, True,
                          TOC_FILLS[index])
-        reqs += write_body(box, toc_body(part))
+        reqs += write_body(box, toc_body(part, size))
     return reqs
 
 
