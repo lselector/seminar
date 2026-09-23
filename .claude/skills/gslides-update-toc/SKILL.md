@@ -32,6 +32,13 @@ under the title and the right side under the epigraph, so
 they never overlap; when the epigraph is
 written or grows, the right side moves down on the next run.
 
+The font is 14 pt. When the items do not all fit, the script
+drops to 13 or 12 pt, the largest size at which they do, and
+logs it (`table of contents: font 12 pt`). If even 12 pt is
+too big, the last box runs past the bottom of the slide:
+tell the author, and suggest leaving minor items out with
+`"-"` labels.
+
 Because the script paints those colours, a fill is not how
 the author freezes the contents. If the log says `left
 alone, you recoloured ...`, the author gave a contents box
