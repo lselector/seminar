@@ -20,7 +20,8 @@ order and fill one box before the next, in that order; a box
 holds 8 to 12 lines, as many as fit its side, and an empty
 box shows "xxx". The left side starts under the title; the
 right side starts under the epigraph at top right, so the
-two never overlap. A skill can
+two never overlap. The font is 14 pt, or 13 or 12 pt when
+that is what it takes for every item to fit. A skill can
 pass labels for headlines; "-" leaves a headline out, and
 headlines given the same label are listed once:
 
@@ -47,7 +48,7 @@ Usage:
     python3 g3_update_toc.py --json toc.json  labels, epigraph
 
 Created: 2026-09-14
-Last updated: 2026-09-19
+Last updated: 2026-09-23
 """
 
 import re
@@ -256,6 +257,7 @@ def toc_requests(deck, names, epigraph=None):
         return []
     sid = T.PAGE_TOC
     tops = (L.BAND_TOP, right_top(deck, epigraph))
+    log(f"{LABEL}: font {R.toc_size(len(names), tops)} pt")
     wanted = R.render_toc_boxes(sid, sid, names, tops)
     reqs = W.replace_owned(deck, sid, wanted, sweep=False,
                            allow=column_ids())
