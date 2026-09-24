@@ -19,7 +19,7 @@ Usage:
                                       #          "727"), ...}
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-24
 """
 
 import json
@@ -29,7 +29,7 @@ import urllib.request
 from sources import element_shot as E
 from sources import fetch_images as F
 
-FYI_API = ("https://layoffsfyi-production.up.railway.app"
+FYI_API = ("https://layoffs-fyi.onrender.com"
            "/api/annual-stats")
 TRUEUP_URL = "https://trueup.io/layoffs"
 TRUEUP_MARKER = "people impacted"
