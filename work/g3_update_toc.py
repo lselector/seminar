@@ -109,8 +109,12 @@ def is_yours(shape):
 
 # --------------------------------------------------------------
 def headline(shape):
-    """The line a box contributes to the contents."""
-    line = shape.first_line()
+    """The line a box contributes to the contents.
+
+    A soft line break (Shift+Enter, "\\v") reads as a space.
+    """
+    line = shape.first_line().replace("\v", " ")
+    line = " ".join(line.split())
     if line.startswith(R.BULLET.strip()):
         line = line[len(R.BULLET.strip()):].strip()
     return line
