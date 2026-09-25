@@ -48,7 +48,7 @@ Usage:
     python3 g3_update_toc.py --json toc.json  labels, epigraph
 
 Created: 2026-09-14
-Last updated: 2026-09-23
+Last updated: 2026-09-25
 """
 
 import re
@@ -207,6 +207,18 @@ def collect(deck, labels=None):
         if name and name not in names:
             names.append(name)
     return names
+
+
+# --------------------------------------------------------------
+def shown(deck):
+    """Items the contents boxes list now, in box order."""
+    items = []
+    for box_id in column_ids():
+        shape = deck.shape(box_id)
+        if shape:
+            items += [p for p in shape.paragraphs()
+                      if p != R.TOC_EMPTY]
+    return items
 
 
 # --------------------------------------------------------------

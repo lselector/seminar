@@ -26,7 +26,7 @@ Usage:
     python3 g8_preflight.py 2026-09-18
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-25
 """
 
 import datetime as dt
@@ -89,12 +89,7 @@ def placeholders(deck):
 def stale_contents(deck):
     """A note when the TOC does not list what is there."""
     wanted = TOC.collect(deck)
-    shown = []
-    for box_id in TOC.column_ids():
-        shape = deck.shape(box_id)
-        if shape:
-            shown += [p for p in shape.paragraphs()
-                      if p != R.TOC_EMPTY]
+    shown = TOC.shown(deck)
     if shown == wanted:
         return []
     return [f"lists {len(shown)}, slides have {len(wanted)}: "
