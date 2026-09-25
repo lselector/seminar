@@ -90,6 +90,7 @@ deck, for example today's after 3 pm.
 | 7. Layoffs | `python3 g7_update_layoffs.py --json lay.json` | `/gslides-update-layoffs` |
 | Before presenting | `python3 g8_preflight.py` | |
 | Deck text, epigraph ideas | `python3 g9_deck_text.py --out deck.md` | `/gslides-epigraphs` |
+| Contents as a topic list | `python3 g9_deck_text.py --toc --out topics.txt` | `/gslides-topics-extract` (YouTube folder) |
 
 Steps 2 to 7 can run in any order, as often as you like.
 Running one twice either refreshes it or does nothing. Steps

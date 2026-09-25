@@ -932,6 +932,29 @@ def test_deck_text_covers_the_talk_and_skips_parked():
     assert TXT.split_out(["2026-09-25", "--out", "x.md"]) == \
         ("x.md", ["2026-09-25"])
 
+
+# --------------------------------------------------------------
+def test_shown_lists_the_contents_boxes_without_xxx():
+    """The TOC items as the four boxes show them, in order."""
+    deck = lived()
+    items = TOC.shown(deck)
+    assert items, "the lived-in deck has a contents list"
+    assert R.TOC_EMPTY not in items
+    first = deck.shape(TOC.column_ids()[0]).paragraphs()
+    assert items[:len(first)] == first
+
+
+# --------------------------------------------------------------
+def test_topics_leave_out_date_only_lines():
+    """A date in the contents is not a topic for the video."""
+    import g9_deck_text as TXT
+    deck = lived()
+    box = deck.shape(TOC.column_ids()[0])
+    box.text = "LM Arena\nSept 24\nSept 24 news\n"
+    items = TXT.topics(deck)
+    assert "Sept 24" not in items
+    assert items[:2] == ["LM Arena", "Sept 24 news"]
+
 # --------------------------------------------------------------
 if __name__ == "__main__":
     run(globals())

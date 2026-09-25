@@ -8,22 +8,32 @@ Tables come out one row per line, cells joined by " | ".
 Parked slides and speaker notes are left out. Changes
 nothing in the deck.
 
+With --toc it writes only the table of contents on slide 1,
+one item per line, as the four contents boxes show it now,
+without lines that are only a date ("Sept 24"): the date
+belongs on the slide but is not a topic.
+
 Used by the gslides-epigraphs skill, which reads the text to
-write epigraphs for the week, and handy whenever the words of
-a deck are wanted without opening it.
+write epigraphs for the week, by gslides-topics-extract,
+which saves the contents as the video's topic list, and
+handy whenever the words of a deck are wanted without
+opening it.
 
 Usage:
     python3 g9_deck_text.py                      to stdout
     python3 g9_deck_text.py --out deck.md
     python3 g9_deck_text.py 2026-09-18 --out deck.md
+    python3 g9_deck_text.py 2026-09-18 --toc --out topics.txt
 
 Created: 2026-09-18
-Last updated: 2026-09-18
+Last updated: 2026-09-25
 """
 
 import sys
 
+import g3_update_toc as TOC
 from gslides import deck as G
+from gslides import write as W
 from gslides.client import log
 from gslides.step import start
 
@@ -70,6 +80,13 @@ def slide_text(slide, number):
 
 
 # --------------------------------------------------------------
+def topics(deck):
+    """The contents items that are topics, not dates."""
+    return [item for item in TOC.shown(deck)
+            if not W.DATE_WORDS.fullmatch(item)]
+
+
+# --------------------------------------------------------------
 def deck_text(deck):
     """The whole talk as one Markdown document."""
     sections = [f"# {deck.title}"]
@@ -82,14 +99,20 @@ def deck_text(deck):
 def main():
     """Write the text of one deck to a file or stdout."""
     out, argv = split_out(sys.argv[1:])
+    toc = "--toc" in argv
+    argv = [a for a in argv if a != "--toc"]
     step = start("Extract the text of a deck", argv)
-    text = deck_text(G.read_deck(step.slides, step.deck_id))
+    deck = G.read_deck(step.slides, step.deck_id)
+    items = topics(deck) if toc else []
+    text = "\n".join(items) + "\n" if toc else deck_text(deck)
     if not out:
         print(text, end="")
         return
     with open(out, "w", encoding="utf-8") as handle:
         handle.write(text)
-    log(f"deck text: {len(text.split())} words -> {out}")
+    size = f"{len(items)} items" if toc \
+        else f"{len(text.split())} words"
+    log(f"deck text: {size} -> {out}")
 
 
 # --------------------------------------------------------------
