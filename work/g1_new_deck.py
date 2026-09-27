@@ -2,7 +2,7 @@
 """
 Step 1: create the Google Slides deck for one seminar.
 
-Builds the eleven-page skeleton described in ADD.md in the
+Builds the twelve-page skeleton described in ADD.md in the
 folder named in config/gslides.json:
 
      1 s-toc        title, TOC and epigraph placeholders
@@ -12,26 +12,29 @@ folder named in config/gslides.json:
      5 (copied)     the channel promo, last week's page *
      6 s-news-2     "AI News" with one placeholder box
      7 (copied)     jobs and layoffs, last week's page *
-     8 s-about      About the Speaker
-     9 s-thanks     Thank You!
-    10 s-separator  everything after this is left out
-    11 s-parked     where rejected topics go
+     8 (copied)     tech hiring, last week's page *
+     9 s-about      About the Speaker
+    10 s-thanks     Thank You!
+    11 s-separator  everything after this is left out
+    12 s-parked     where rejected topics go
 
-* Pages 2, 3, 5 and 7 are the author's designs. Page 2 has
+* Pages 2, 3, 5, 7 and 8 are carried over. Page 2 has
 two Code | Model | Score tables, captions, legend, the Elo
 note and the model sizes; the Slides API cannot draw a table
 that compact (it cannot set cell padding). Page 3 has the
 author's notes, a date box and the chart marked
 auto: aa-index-chart. Page 5 has the author's promo box and
 channel screenshots. Page 7 has the author's layoffs.fyi and
-TrueUp boxes and two marked charts. So the new deck starts
-as a Drive copy of the latest earlier deck with every slide
-but those four deleted; the other pages are drawn around
-them, and steps 4 to 7 put this week's numbers, dates and
-charts in. With no earlier deck, they are the script's own
-pages: s-bench, s-aa-index, s-youtube and s-layoffs.
+TrueUp boxes and two marked charts. Page 8 is the script's
+own hiring page, carried so the author's changes to it
+stay. So the new deck starts as a Drive copy of the latest
+earlier deck with every slide but those five deleted; the
+other pages are drawn around them, and steps 4 to 7 and 10
+put this week's numbers, dates and charts in. A page the
+earlier deck lacks is drawn as the script's own: s-bench,
+s-aa-index, s-youtube, s-layoffs or s-hiring.
 
-The wording of pages 3, 5, 7, 8 and 9 comes from
+The wording of pages 3, 5, 7 to 10 comes from
 config/skeleton.json, the one place that text lives.
 Their first pictures are the ones in work/assets;
 the update steps refresh them later.
@@ -52,7 +55,7 @@ Usage:
   seminar ends; from then on, the Friday after.
 
 Created: 2026-09-14
-Last updated: 2026-09-18
+Last updated: 2026-09-27
 """
 
 import json
@@ -80,22 +83,28 @@ FIXED_PAGES = {
     "youtube": (T.PAGE_YOUTUBE, [T.TOPIC_YOUTUBE]),
     "layoffs": (T.PAGE_LAYOFFS,
                 [T.TOPIC_LAYOFFS_FYI, T.TOPIC_TRUEUP]),
+    "hiring": (T.PAGE_HIRING,
+               [T.TOPIC_HIRING_JOBS, T.TOPIC_HIRING_SKILLS]),
     "about": (T.PAGE_ABOUT, [T.TOPIC_ABOUT]),
     "thanks": (T.PAGE_THANKS, [T.TOPIC_THANKS]),
 }
 NEWS_PAGES = [(T.PAGE_NEWS_1, T.TOPIC_NEWS_1),
               (T.PAGE_NEWS_2, T.TOPIC_NEWS_2)]
 
-# Pages 3 to 9, in order, after contents and benchmarks.
+# Pages 3 to 10, in order, after contents and benchmarks.
 MIDDLE = ["aa_index", NEWS_PAGES[0], "youtube",
-          NEWS_PAGES[1], "layoffs", "about", "thanks"]
+          NEWS_PAGES[1], "layoffs", "hiring", "about",
+          "thanks"]
 
 # The author's own pages carried over from last week's deck,
-# found by fixed id or by title, and the drawn page each one
-# goes in front of. Page 2 is found by its tables instead.
-TITLED = [("aa_index", T.PAGE_AA, T.PAGE_NEWS_1),
-          ("youtube", T.PAGE_YOUTUBE, T.PAGE_NEWS_2),
-          ("layoffs", T.PAGE_LAYOFFS, T.PAGE_ABOUT)]
+# found by fixed id or by title, and the pages each one goes
+# in front of: the first of them already in place. Page 2 is
+# found by its tables instead.
+TITLED = [("aa_index", T.PAGE_AA, [T.PAGE_NEWS_1]),
+          ("youtube", T.PAGE_YOUTUBE, [T.PAGE_NEWS_2]),
+          ("layoffs", T.PAGE_LAYOFFS,
+           [T.PAGE_HIRING, T.PAGE_ABOUT]),
+          ("hiring", T.PAGE_HIRING, [T.PAGE_ABOUT])]
 
 NEWS_TITLE = "AI News"
 SEPARATOR_TITLE = "Not in the presentation"
@@ -163,13 +172,10 @@ def news_page(sid, key):
 
 # --------------------------------------------------------------
 def fixed_page(name, entry, locate):
-    """Pages 3, 5, 7, 8, 9: from config/skeleton.json."""
+    """Pages 3, 5, 7 to 10: from config/skeleton.json."""
     sid, keys = FIXED_PAGES[name]
-    pages = L.paginate([K.section(entry, ROOT)])
-    if not pages:
-        return sid, R.render_title(sid, sid, entry["title"])
-    return sid, R.render_content(sid, sid, pages[0], keys,
-                                 fill=None, locate=locate)
+    return sid, R.render_fixed(sid, keys,
+                               K.section(entry, ROOT), locate)
 
 
 # --------------------------------------------------------------
@@ -300,7 +306,8 @@ def final_order(page_ids, kept):
         order.insert(1, kept["bench"])
     for key, _, before in TITLED:
         if key in kept:
-            order.insert(order.index(before), kept[key])
+            anchor = next(b for b in before if b in order)
+            order.insert(order.index(anchor), kept[key])
     return order
 
 
@@ -372,7 +379,7 @@ def main():
     log(f"Deck ready: {len(order)} slides")
     if kept:
         log("Copied pages still show last week's numbers: run "
-            "g4, g5, g6 and g7")
+            "g4, g5, g6, g7 and g10")
     log(link)
 
 

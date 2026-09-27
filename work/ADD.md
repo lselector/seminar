@@ -122,7 +122,7 @@ of the author's Drive.
   skills (Claude)                 scripts (Python)            Google
   ---------------                 ----------------            ------
   gslides-add-news   --news.json-->  g2_add_news  ---+
-  gslides-update-*   --json------->  g3 .. g7     ---+--> Slides API --> live deck
+  gslides-update-*   --json------->  g3 .. g7, g10 -+--> Slides API --> live deck
                                      g1_new_deck  ---+                    ^
                                      g8_preflight (read only)             |
                                                                      author edits
@@ -199,12 +199,13 @@ of letters, digits, `_` and `-`; `gslides/ids.py` enforces it.
 | 5 | `s-youtube` | promo text, channel picture | g6 |
 | 6 | `s-news-2` | "AI News", one placeholder box | g2 |
 | 7 | `s-layoffs` | Layoffs.fyi and TrueUp topics | g7 |
-| 8 | `s-about` | portrait and bio | fixed |
-| 9 | `s-thanks` | links | fixed |
-| 10 | `s-separator` | divider note; topic ledger in speaker notes | never |
-| 11 | `s-parked` | empty, for rejected topics | never |
+| 8 | `s-hiring` | job postings and skills-in-demand topics | g10 |
+| 9 | `s-about` | portrait and bio | fixed |
+| 10 | `s-thanks` | links | fixed |
+| 11 | `s-separator` | divider note; topic ledger in speaker notes | never |
+| 12 | `s-parked` | empty, for rejected topics | never |
 
-The wording of pages 3, 5, 7, 8 and 9 lives in
+The wording of pages 3, 5, 7 to 10 lives in
 `config/skeleton.json`, the one place that text is kept.
 
 The file is named `YYYY-MM-DD-AI-News` and tagged with
@@ -263,6 +264,7 @@ docstring on every module, function and class.
 | `gslides-update-aa-index` | the Artificial Analysis page | none | `g5` | overriding a filled box |
 | `gslides-update-youtube` | the channel page | none | `g6` | wording beyond the counts line |
 | `gslides-update-layoffs` | layoffs.fyi, TrueUp | none | `g7` | overriding a filled topic |
+| `gslides-update-hiring` | Dice Tech Jobs Report, Indeed Hiring Lab | none | `g10` | overriding a filled topic |
 
 Agents never edit the deck directly. They reach it only
 through the step scripts, so every write passes the same
@@ -320,10 +322,14 @@ Geometry (inches): slide 10 x 5.625, margin 0.09, content
 band 0.46 to 5.53, text column 6.10 beside a 3.60 picture
 column. Titles Calibri 20 bold; headlines red bold; bullets
 Calibri 12 as a real bulleted list with a hanging indent;
-code Consolas 9 blue; links 9 pt blue. A Slides bullet takes
-the colour and size of the first character on its line, so
-news bullets are black and contents bullets blue. Decks
-written before 2026-09-16 have a typed red dot instead.
+code Consolas 9 blue; links 9 pt blue. A news topic is one
+list: headline, bullets and link each carry a dot (since
+2026-09-27; promo, profile and closing pages keep an
+undotted headline and link). A Slides bullet takes the
+colour and size of the first character on its line, so the
+headline dot is red, fact dots black, the link dot small
+blue, and contents dots blue. Decks written before
+2026-09-16 have a typed red dot instead.
 
 **Slides-specific corrections**, all measured:
 
@@ -387,11 +393,34 @@ author's, filled or not. If no box holds it and the script's
 box is gone, `g6` draws the box again from
 `config/skeleton.json`, since `g1` never touches a deck that
 already exists. The wording lives in `layout/skeleton.py`,
-which `g1` and `g6` both read.
+which `g1` and `g6` both read. `g6` also retakes the
+pictures marked `auto: youtube-videos` (channel header and
+Videos tab) and `auto: youtube-shorts` (Shorts tab, from the
+tabs down), each shot in its frame's width:height shape at a
+1280 px viewport, so it fills the frame
+(`element_shot.shoot_region`).
 
 **Layoffs: two independent topics.** `g7` refreshes the
 Layoffs.fyi and TrueUp boxes separately, so freezing one
 does not block the other.
+
+**Hiring: numbers by script, skills by skill.** `g10` keeps
+`s-hiring`, right after layoffs, with two topics refreshed
+separately. Job postings: `sources/hiring.py` reads Indeed's
+software development and all-postings indexes from FRED
+(CSV) and Indeed's AI share of postings (hiring-lab
+ai-tracker on GitHub), and the script writes the bullets;
+the picture is FRED's own chart of both indexes. FRED
+stalls browser-like User-Agents, so these downloads use
+Python's default one. Skills in demand need judgement, so
+the skill passes bullets as JSON; the picture is Dice's
+"Top 50 Skills" Infogram embed, found by its iframe title
+because the id changes monthly, shot in the frame's shape.
+If the deck has no hiring page (decks made before
+2026-09-27), `g10` draws it from `config/skeleton.json`
+after the layoffs page. `g1` carries it like the other
+standing pages; a carried layoffs page goes before the
+first of `s-hiring` and `s-about` already in place.
 
 ## Pictures
 
@@ -543,7 +572,7 @@ The whole design is seven decisions.
 | F1 | Create a dated 16:9 deck with the standing pages, in a chosen Drive folder |
 | F2 | Add news topics (headline, bullets, link, picture) with automatic layout |
 | F3 | Generate the contents list from the slides in their current order |
-| F4 | Refresh benchmarks, Intelligence Index, YouTube counts and layoffs pages |
+| F4 | Refresh benchmarks, Intelligence Index, YouTube counts, layoffs and hiring pages |
 | F5 | Never change a box the author filled, or its picture |
 | F6 | Never change anything the author created or pasted |
 | F7 | Never write past the separator; never re-add a parked or deleted topic |

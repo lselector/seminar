@@ -30,7 +30,7 @@ Usage:
                           fill=None, locate=my_locator)
 
 Created: 2026-09-14
-Last updated: 2026-09-16
+Last updated: 2026-09-27
 """
 
 import os
@@ -157,30 +157,33 @@ def add_headline(body, item):
         return
     body.run(text, size=L.headline_size(item.block, item.size),
              bold=True, colour=RED, font=FONT)
-    body.end_line()
+    body.end_line(bullet=L.is_news(item.block))
 
 
 # --------------------------------------------------------------
-def add_bullet(body, text, item, dotted):
+def add_bullet(body, text, item):
     """Write one body line, as a list bullet or plain."""
     if is_link(text):
         body.run(text, size=L.link_size(item.size),
                  colour=BLUE, font=FONT, link=text)
-        body.end_line()
-        return
-    for chunk, style in split_markup(text):
-        body.run(chunk, **piece_style(style, item.size))
-    body.end_line(bullet=dotted)
+    else:
+        for chunk, style in split_markup(text):
+            body.run(chunk, **piece_style(style, item.size))
+    body.end_line(bullet=L.has_dot(item.block, text))
 
 
 # --------------------------------------------------------------
 def block_body(item):
-    """Build the full text and styling of one news block."""
+    """Build the full text and styling of one news block.
+
+    A news topic is one list, so its red headline and small
+    blue link carry a dot too; each dot takes the colour and
+    size of the first character on its line.
+    """
     body = Body()
     add_headline(body, item)
-    dotted = not L.is_promo(item.block)
     for text in item.block.bullets:
-        add_bullet(body, text, item, dotted)
+        add_bullet(body, text, item)
     return body
 
 
@@ -224,10 +227,11 @@ def plain_body(text, size, colour=BLACK, bold=False,
 def height_in_box(block, width, size):
     """How tall a block's text is at a width and size."""
     total = L.headline_height(block.headline, width,
-                              L.headline_size(block, size))
-    dotted = not L.is_promo(block)
+                              L.headline_size(block, size),
+                              L.is_news(block))
     for text in block.bullets:
-        total += L.bullet_height(text, width, size, dotted)
+        total += L.bullet_height(text, width, size,
+                                 L.has_dot(block, text))
     return total
 
 
@@ -396,6 +400,20 @@ def render_content(slide_id, tag, page, keys, fill=YELLOW,
         reqs += render_block(slide_id, keys[index], item,
                              not page.plain, fill, locate)
     return reqs
+
+
+# --------------------------------------------------------------
+def render_fixed(slide_id, keys, section, locate=None):
+    """Draw a standing page from its skeleton section.
+
+    The section must fit one slide; a page with no blocks
+    gets just its title. Boxes are drawn unfilled.
+    """
+    pages = L.paginate([section])
+    if not pages:
+        return render_title(slide_id, slide_id, section.title)
+    return render_content(slide_id, slide_id, pages[0], keys,
+                          fill=None, locate=locate)
 
 
 # --------------------------------------------------------------

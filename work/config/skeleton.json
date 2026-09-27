@@ -53,6 +53,27 @@
       }
     ]
   },
+  "hiring": {
+    "title": "Tech Hiring",
+    "topics": [
+      {
+        "headline": "Software job postings on Indeed",
+        "bullets": [
+          "Indeed job postings index, Feb 1, 2020 = 100",
+          "https://fred.stlouisfed.org/series/IHLIDXUSTPSOFTDEVE"
+        ],
+        "image": "assets/hiring-postings.jpg"
+      },
+      {
+        "headline": "Skills in demand",
+        "bullets": [
+          "Qualifications employers ask for most",
+          "https://www.hiringlab.org"
+        ],
+        "image": "assets/hiring-skills.jpg"
+      }
+    ]
+  },
   "about": {
     "title": "About the Speaker",
     "kind": "profile",

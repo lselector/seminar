@@ -41,7 +41,8 @@ request, even if you made the shapes:
   `subscribers`, in whichever box on that slide holds it,
   filled or not. The rest of that box is left alone, and if
   the promo box is gone the step draws it again from
-  `config/skeleton.json`.
+  `config/skeleton.json`. It also retakes the channel's
+  Videos and Shorts screenshots marked below.
 
 **Pictures you add are never deleted or replaced**, on any
 slide. A script replaces a picture you placed only when its
@@ -53,6 +54,8 @@ picture, Alt text, Description):
 | `auto: aa-index-chart` | step 5, the Cost per Intelligence Index Task chart |
 | `auto: trueup-chart` | step 7, TrueUp's Tech Employees Impacted chart |
 | `auto: layoffs-fyi-chart` | step 7, layoffs.fyi's Recent Tech Layoffs chart |
+| `auto: youtube-videos` | step 6, the channel header and Videos tab |
+| `auto: youtube-shorts` | step 6, the channel's Shorts tab |
 
 The marks travel with a slide copied into next week's deck.
 To keep a marked picture as it is, delete the mark.
@@ -86,17 +89,25 @@ deck, for example today's after 3 pm.
 | 3. Contents and epigraph | `python3 g3_update_toc.py --json toc.json` | `/gslides-update-toc` |
 | 4. Benchmarks | `python3 g4_update_bench.py` | `/gslides-update-benchmarks` |
 | 5. Intelligence Index | `python3 g5_update_aa_index.py` | `/gslides-update-aa-index` |
-| 6. YouTube counts | `python3 g6_update_youtube.py` | `/gslides-update-youtube` |
+| 6. YouTube counts and screenshots | `python3 g6_update_youtube.py` | `/gslides-update-youtube` |
 | 7. Layoffs | `python3 g7_update_layoffs.py --json lay.json` | `/gslides-update-layoffs` |
+| 10. Hiring | `python3 g10_update_hiring.py --json hiring.json` | `/gslides-update-hiring` |
 | Before presenting | `python3 g8_preflight.py` | |
 | Deck text, epigraph ideas | `python3 g9_deck_text.py --out deck.md` | `/gslides-epigraphs` |
 | Contents as a topic list | `python3 g9_deck_text.py --toc --out topics.txt` | `/gslides-topics-extract` (YouTube folder) |
 
-Steps 2 to 7 can run in any order, as often as you like.
+Steps 2 to 7 and 10 can run in any order, as often as you like.
 Running one twice either refreshes it or does nothing. Steps
 that need judgement (finding news, reading numbers off a web
 page) are skills: Claude does the reading and hands the
 result to the script as JSON.
+
+Step 10 keeps the Tech Hiring slide: it reads the job
+postings numbers itself (Indeed data via FRED) and takes the
+skills in demand from `hiring.json`, with a FRED chart and
+Dice's Top 50 Skills table as pictures. A filled box stays
+as it is. If the deck has no such slide, the step adds it
+after Jobs and Layoffs.
 
 Every text box a script writes is as tall as its text.
 Slides' "resize shape to fit text" cannot be switched on
@@ -135,27 +146,32 @@ speaker notes; a headline with no label is cut to fit.
 | 5 | Weekly videos every Friday: a copy of last week's page 5 (see below) | Step 6 |
 | 6 | AI News (placeholder) | Step 2 |
 | 7 | Jobs and Layoffs: a copy of last week's page 7 (see below) | Step 7 |
-| 8 | About the Speaker | fixed |
-| 9 | Thank You! | fixed |
-| 10 | Not in the presentation | never touched |
-| 11 | Parked topics | never touched |
+| 8 | Tech Hiring: job postings numbers and skills in demand | Step 10 |
+| 9 | About the Speaker | fixed |
+| 10 | Thank You! | fixed |
+| 11 | Not in the presentation | never touched |
+| 12 | Parked topics | never touched |
 
 Pages 2, 3, 5 and 7 are your own designs. Page 2 has two
 Code | Model | Score tables, the captions, legend, Elo note
 and model sizes; page 3 has your notes, the date box and the
 chart marked `auto: aa-index-chart`; page 5 has your promo
-box and channel screenshots; page 7 has your TrueUp and
+box and the Videos and Shorts screenshots marked
+`auto: youtube-videos` and `auto: youtube-shorts`; page 7 has your TrueUp and
 layoffs.fyi boxes and the two charts marked
-`auto: trueup-chart` and `auto: layoffs-fyi-chart`. Step 1
-makes each new deck as a Drive copy of the latest earlier
-deck, deletes every slide but those four, and draws the rest
+`auto: trueup-chart` and `auto: layoffs-fyi-chart`. Page 8,
+Tech Hiring, is the script's, carried too so your changes to
+it stay. Step 1 makes each new deck as a Drive copy of the
+latest earlier deck, deletes every slide but those five, and
+draws the rest
 around them (the Slides API cannot draw a table that
 compact). So whatever you change on those pages this week
 carries into next week's deck, alt text marks included.
-Steps 4 to 7 then put this week's numbers, dates and charts
-in; on page 5 that is the counts line only, and your
+Steps 4 to 7 and 10 then put this week's numbers, dates and
+charts in; on page 5 that is the counts line only, and your
 screenshots stay as you placed them. Only a deck with no
-earlier deck to copy gets the script's plain versions.
+earlier deck to copy, or an earlier deck missing one of
+these pages, gets the script's plain version of it.
 
 News goes onto slides 4 and 6 first. Further news slides are
 inserted just before Jobs and Layoffs, wherever that slide

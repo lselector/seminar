@@ -5,12 +5,21 @@ Step 6: refresh the YouTube channel slide.
 Reads the subscriber and video counts from the channel page
 and replaces only the line that mentions subscribers, so the
 rest of the wording stays exactly as you left it. Then it
-retakes the channel screenshot.
+retakes the channel screenshot, and the screenshots of the
+channel's Videos and Shorts tabs.
 
-The counts line is the one thing on this slide the step keeps
+The counts line is the one thing in the text the step keeps
 current by request, so it is rewritten even in a box you
-filled, and even in a promo box you made yourself. Everything
-else on the slide, your pictures included, is left alone.
+filled, and even in a promo box you made yourself.
+
+A picture is retaken only if it is the script's own or its
+alt text description carries a mark:
+
+    auto: youtube-videos   the channel header and Videos tab
+    auto: youtube-shorts   the Shorts tab, from its tabs down
+
+Each is shot in its frame's shape, so it fills the frame.
+Every other picture on the slide is left alone.
 
 If the promo box is gone altogether, the step draws it again
 from config/skeleton.json with the current counts in it.
@@ -25,11 +34,11 @@ Usage:
     python3 g6_update_youtube.py --json counts.json
 
 Created: 2026-09-14
-Last updated: 2026-09-18
+Last updated: 2026-09-27
 """
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from layout import deck_layout as L
 from layout import skeleton as K
@@ -47,6 +56,13 @@ PAGE_KEY = "youtube"
 BOX = T.shape_id(T.TOPIC_YOUTUBE, T.BOX)
 PICTURE = T.shape_id(T.TOPIC_YOUTUBE, T.PICTURE)
 
+# Alt text mark -> (channel tab, element the shot starts at).
+HEADER = "yt-page-header-renderer"
+TABS = {
+    "auto: youtube-videos": ("videos", HEADER),
+    "auto: youtube-shorts": ("shorts", "#tabs-container"),
+}
+
 RE_SUBSCRIBERS = re.compile(r"([\d.,]+[KM]?) subscribers")
 RE_VIDEOS = re.compile(r"([\d,]+) videos")
 
@@ -57,6 +73,7 @@ class Target:
 
     page: object
     box: object = None
+    tabs: dict = field(default_factory=dict)
     allow: tuple = ()
 
 
@@ -107,8 +124,13 @@ def locate(deck):
     if not page:
         return None
     box = find_box(page)
-    return Target(page=page, box=box,
-                  allow=(box.id,) if box else ())
+    shapes = {s.id: s for s in page.shapes}
+    tabs = {m: shapes[G.marked_picture(page, m)]
+            for m in TABS if G.marked_picture(page, m)}
+    mine = ([box.id] if box else []) + \
+        [s.id for s in tabs.values()]
+    return Target(page=page, box=box, tabs=tabs,
+                  allow=tuple(mine))
 
 
 # --------------------------------------------------------------
@@ -170,11 +192,31 @@ def plan_for(line, found):
                 else []
             reqs += W.refresh_picture(deck, PICTURE,
                                       urls.get(PICTURE))
+            for shape in target.tabs.values():
+                reqs += W.refresh_picture(
+                    deck, shape.id, urls.get(shape.id),
+                    target.allow)
             return [(LABEL, reqs)]
 
         return plan
 
     return make
+
+
+# --------------------------------------------------------------
+def picture_specs(found, url):
+    """How to get each picture: the channel and its tabs."""
+    specs = {PICTURE: {"shot": url}}
+    for mark, shape in found.tabs.items():
+        tab, selector = TABS[mark]
+        specs[shape.id] = {"shot": f"{url}/{tab}",
+                           "region": selector,
+                           "aspect": shape.rect.w / shape.rect.h}
+    missing = [m for m in TABS if m not in found.tabs]
+    if missing:
+        log(f"{LABEL}: no picture has the alt text "
+            f"{', '.join(repr(m) for m in missing)}")
+    return specs
 
 
 # --------------------------------------------------------------
@@ -193,7 +235,7 @@ def main():
     if not found:
         log(f"{LABEL}: no channel slide in the talk")
         return
-    sent = with_pictures(step, {PICTURE: {"shot": url}},
+    sent = with_pictures(step, picture_specs(found, url),
                          plan_for(line, found), LABEL,
                          allow=found.allow)
     if sent > 0:

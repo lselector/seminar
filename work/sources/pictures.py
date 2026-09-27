@@ -10,7 +10,10 @@ Two stages per picture, in a temporary directory:
             with optional "width" of the viewport,
             "visible": true for pages with a bot check, and
             "ready": a JavaScript test that the chart has
-            its data),
+            its data), screenshot from an element down in a
+            frame's shape ({"shot": url, "region": css,
+            "aspect": width / height, optional "width"
+            of the viewport}),
             or use a local file ({"file": p})
     clean   trim, flatten and shrink it with ImageMagick to
             the pixels its box on the slide actually needs
@@ -27,7 +30,7 @@ Usage:
     path = prepare({"shot": url}, 3.6, workdir())
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-27
 """
 
 import os
@@ -117,6 +120,11 @@ def fetch(spec, folder):
         return path if os.path.isfile(path) else None
     if spec.get("src"):
         return download(spec["src"], folder)
+    if spec.get("shot") and spec.get("region"):
+        return E.shoot_region(spec["shot"], spec["region"],
+                              spec["aspect"],
+                              os.path.join(folder, "shot.png"),
+                              spec.get("width", E.REGION_WIDTH))
     if spec.get("shot") and spec.get("element"):
         visible = spec.get("visible", False)
         if not visible and challenged(spec["shot"]):

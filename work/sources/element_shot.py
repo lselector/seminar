@@ -9,6 +9,8 @@ whose own text is the heading, walks up to the first
 ancestor tall enough to hold what sits under the heading (a
 chart, say), scrolls it into view so lazy charts draw, and
 captures just that rectangle at twice the pixel density.
+shoot_region captures from a CSS selector's element down,
+in a given width:height shape (a YouTube channel tab).
 page_text reads a page's visible text the same way.
 
 Usage:
@@ -19,7 +21,7 @@ Usage:
         "Cost per Intelligence Index Task", "/tmp/chart.png")
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-09-27
 """
 
 import base64
@@ -38,6 +40,9 @@ import websocket
 from sources import fetch_images as F
 
 WIDTH, HEIGHT = 1600, 1000
+# Viewport width for shoot_region. At 1280 px YouTube folds
+# its side menu away and shows three video columns.
+REGION_WIDTH = 1280
 SCALE = 2
 MIN_HEIGHT = 300
 PAD = 12
@@ -67,6 +72,13 @@ LOCATE_JS = """(() => {
 
 MEASURE_JS = """(() => {
   const r = window.__shot.getBoundingClientRect();
+  return {x: r.x + scrollX, y: r.y + scrollY,
+          width: r.width, height: r.height};
+})()"""
+
+
+REGION_JS = """(() => {
+  const r = document.querySelector(%s).getBoundingClientRect();
   return {x: r.x + scrollX, y: r.y + scrollY,
           width: r.width, height: r.height};
 })()"""
@@ -165,10 +177,10 @@ def connect(port):
 
 
 # --------------------------------------------------------------
-def open_page(cdp, url, width=WIDTH):
-    """Load a page at a given viewport width."""
+def open_page(cdp, url, width=WIDTH, height=HEIGHT):
+    """Load a page at a given viewport size."""
     cdp.call("Emulation.setDeviceMetricsOverride", width=width,
-             height=HEIGHT, deviceScaleFactor=SCALE,
+             height=height, deviceScaleFactor=SCALE,
              mobile=False)
     cdp.call("Page.enable")
     cdp.call("Page.navigate", url=url)
@@ -232,6 +244,41 @@ def shoot_element(url, heading, path, width=WIDTH,
             return capture(cdp, rect, path)
     except ERRORS as exc:
         F.log_message(f"  could not shoot {heading!r}: {exc}")
+        return None
+
+
+# --------------------------------------------------------------
+def find_region(cdp, url, selector, aspect, width):
+    """Rect from an element's top down, width:height aspect."""
+    tall = int(width / aspect) + 400
+    open_page(cdp, url, width, tall)
+    probe = f"!!document.querySelector({json.dumps(selector)})"
+    wait_for(cdp, probe, f"element {selector!r}")
+    time.sleep(SETTLE)
+    rect = cdp.js(REGION_JS % json.dumps(selector))
+    rect["height"] = rect["width"] / aspect
+    return rect
+
+
+# --------------------------------------------------------------
+def shoot_region(url, selector, aspect, path,
+                 width=REGION_WIDTH):
+    """Screenshot a page from an element down; path or None.
+
+    The shot is as wide as the element and as tall as aspect
+    (width / height) asks, so it fills a picture frame of
+    that shape. The viewport is made tall enough for the
+    whole region, so lazy thumbnails in it load.
+    """
+    if not os.path.isfile(F.CHROME):
+        F.log_message(f"  Chrome not found at {F.CHROME}")
+        return None
+    try:
+        with browser() as cdp:
+            rect = find_region(cdp, url, selector, aspect, width)
+            return capture(cdp, rect, path)
+    except ERRORS as exc:
+        F.log_message(f"  could not shoot {selector!r}: {exc}")
         return None
 
 

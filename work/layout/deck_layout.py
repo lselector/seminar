@@ -35,7 +35,7 @@ Usage:
         print(page.title, len(page.items))
 
 Created: 2026-09-12
-Last updated: 2026-09-12
+Last updated: 2026-09-27
 """
 
 from dataclasses import dataclass, field
@@ -202,11 +202,10 @@ def link_size(size_pt):
 
 # --------------------------------------------------------------
 def bullet_height(text, width_in, size_pt,
-                  bullets=True):
+                  dotted=True):
     """Estimate the height of one rendered bullet."""
-    link = is_link(text)
-    size = link_size(size_pt) if link else size_pt
-    inset = 0.0 if link or not bullets else BULLET_INSET
+    size = link_size(size_pt) if is_link(text) else size_pt
+    inset = BULLET_INSET if dotted else 0.0
     lines = wrapped_lines(
         strip_markup(text), width_in - inset, size
     )
@@ -214,12 +213,33 @@ def bullet_height(text, width_in, size_pt,
 
 
 # --------------------------------------------------------------
-def headline_height(text, width_in, size_pt):
+def headline_height(text, width_in, size_pt, dotted=False):
     """Estimate the height of a bold block headline."""
     if not text:
         return 0.0
-    lines = wrapped_lines(text, width_in, size_pt, bold=True)
+    inset = BULLET_INSET if dotted else 0.0
+    lines = wrapped_lines(text, width_in - inset, size_pt,
+                          bold=True)
     return lines * points_to_inches(size_pt * LINE_RATIO)
+
+
+# --------------------------------------------------------------
+def is_news(block):
+    """Check for a plain news topic, headline and link dotted.
+
+    A news topic is one list: red headline, body lines and the
+    small blue link each carry a dot. Other kinds keep an
+    undotted headline and link.
+    """
+    return not (block.promo or block.profile or block.closing)
+
+
+# --------------------------------------------------------------
+def has_dot(block, text):
+    """Check whether one body line is drawn with a list dot."""
+    if is_link(text):
+        return is_news(block)
+    return not is_promo(block)
 
 
 # --------------------------------------------------------------
@@ -262,9 +282,8 @@ def natural_width(block, size_pt):
         bold=True
     )]
     for text in block.bullets:
-        link = is_link(text)
-        size = link_size(size_pt) if link else size_pt
-        pad = 0.0 if link else BULLET_INSET
+        size = link_size(size_pt) if is_link(text) else size_pt
+        pad = BULLET_INSET if has_dot(block, text) else 0.0
         widths.append(
             M.text_width(strip_markup(text), size) + pad
         )
@@ -356,11 +375,12 @@ def block_height(block, size_pt):
     """Estimate the full rendered height of one block."""
     width = text_width_for(block)
     total = headline_height(
-        block.headline, width, headline_size(block, size_pt)
+        block.headline, width, headline_size(block, size_pt),
+        is_news(block)
     )
-    dotted = not is_promo(block)
     for text in block.bullets:
-        total += bullet_height(text, width, size_pt, dotted)
+        total += bullet_height(text, width, size_pt,
+                               has_dot(block, text))
     total += points_to_inches(PARA_GAP * size_pt)
     return total
 

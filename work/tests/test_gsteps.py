@@ -270,7 +270,7 @@ def test_toc_is_a_bold_blue_bulleted_list():
 
 # --------------------------------------------------------------
 def test_news_bullets_are_a_real_list():
-    """Fact lines get list bullets; headline and link do not."""
+    """Headline, fact lines and link are all list bullets."""
     block = Block("Head", bullets=["One **fact**", "Two",
                                    "https://example.com"])
     item = L.Item(block, 12, L.Rect(0, 0, 4, 2))
@@ -279,8 +279,18 @@ def test_news_bullets_are_a_real_list():
     reqs = R.write_body("b1", body)
     listed = [r["createParagraphBullets"]["textRange"]
               for r in reqs if "createParagraphBullets" in r]
-    starts = [len("Head\n"), len("Head\nOne fact\n")]
+    starts = [0, len("Head\n"), len("Head\nOne fact\n"),
+              len("Head\nOne fact\nTwo\n")]
     assert [t["startIndex"] for t in listed] == starts
+
+
+# --------------------------------------------------------------
+def test_profile_headline_and_link_stay_undotted():
+    """Only plain news topics dot their headline and link."""
+    block = Block("Name", bullets=["Fact", "https://x.io"],
+                  profile=True)
+    body = R.block_body(L.Item(block, 12, L.Rect(0, 0, 4, 2)))
+    assert [b for _, _, b in body.lines] == [False, True, False]
 
 
 # --------------------------------------------------------------
@@ -586,7 +596,7 @@ def test_the_copy_keeps_the_authors_pages_draws_the_rest():
                            lambda path: "https://x/" + path,
                            skip=kept)
     ids = [sid for sid, _ in pages]
-    assert len(ids) == 7
+    assert len(ids) == 8 and T.PAGE_HIRING in ids
     for gone in (T.PAGE_BENCH, T.PAGE_AA, T.PAGE_YOUTUBE,
                  T.PAGE_LAYOFFS):
         assert gone not in ids
@@ -594,7 +604,7 @@ def test_the_copy_keeps_the_authors_pages_draws_the_rest():
     assert order[1:3] == ["g_bench", "g_aa"]
     assert order[4] == "g_yt" and order[6] == "g_lay"
     assert order.index("g_lay") + 1 == \
-        order.index(T.PAGE_ABOUT) and len(order) == 11
+        order.index(T.PAGE_HIRING) and len(order) == 12
 
 
 FYI_TEXT = ("  Tech Layoffs by year (US only):\n"
@@ -795,6 +805,25 @@ def test_a_deleted_promo_box_is_drawn_again():
 
 
 # --------------------------------------------------------------
+def test_marked_tab_screenshots_are_retaken():
+    """Videos and Shorts shots are found by alt text, shaped."""
+    deck, page = youtube_deck()
+    page.shapes += [
+        G.Shape(id="g_vid", slide=page.id, kind=G.KIND_IMAGE,
+                rect=L.Rect(5, 1, 2.7, 3.45), filled=True,
+                description="auto: youtube-videos"),
+        G.Shape(id="g_other", slide=page.id,
+                kind=G.KIND_IMAGE, rect=L.Rect(8, 3, 2, 2)),
+    ]
+    found = YT.locate(deck)
+    assert "g_vid" in found.allow and "g_other" not in found.allow
+    specs = YT.picture_specs(found, "https://yt/@me")
+    assert set(specs) == {YT.PICTURE, "g_vid"}
+    assert specs["g_vid"]["shot"] == "https://yt/@me/videos"
+    assert abs(specs["g_vid"]["aspect"] - 2.7 / 3.45) < 1e-9
+
+
+# --------------------------------------------------------------
 def text_box(text, h, w=2.0, styles=None):
     """A hand-made text box with a given height."""
     return G.Shape(id="g_box", slide="s", kind=G.KIND_TEXT,
@@ -898,7 +927,7 @@ def test_preflight_reads_the_benchmark_cutoff():
 
 
 # --------------------------------------------------------------
-def test_skeleton_json_builds_the_eleven_slides_in_order():
+def test_skeleton_json_builds_the_twelve_slides_in_order():
     """g1 needs no Markdown: config/skeleton.json is enough."""
     import g1_new_deck as G1
     pages = G1.build_pages("AI News - Sept 18, 2026",
@@ -906,11 +935,12 @@ def test_skeleton_json_builds_the_eleven_slides_in_order():
     assert [sid for sid, _ in pages] == [
         T.PAGE_TOC, T.PAGE_BENCH, T.PAGE_AA, T.PAGE_NEWS_1,
         T.PAGE_YOUTUBE, T.PAGE_NEWS_2, T.PAGE_LAYOFFS,
-        T.PAGE_ABOUT, T.PAGE_THANKS, T.PAGE_SEPARATOR,
-        T.PAGE_PARKED]
+        T.PAGE_HIRING, T.PAGE_ABOUT, T.PAGE_THANKS,
+        T.PAGE_SEPARATOR, T.PAGE_PARKED]
     made = [W.target(r) for _, reqs in pages for r in reqs
             if "createShape" in r or "createImage" in r]
     for key in (T.TOPIC_AA, T.TOPIC_YOUTUBE, T.TOPIC_TRUEUP,
+                T.TOPIC_HIRING_JOBS, T.TOPIC_HIRING_SKILLS,
                 T.TOPIC_ABOUT, T.TOPIC_THANKS):
         assert T.shape_id(key, T.BOX) in made, key
     assert T.shape_id(T.TOPIC_ABOUT, T.PICTURE) in made

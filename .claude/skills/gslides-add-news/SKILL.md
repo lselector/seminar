@@ -73,7 +73,10 @@ Rules for each topic, the same as the archive decks:
 - `**bold**` for the key fact, `==highlight==` for a number,
   `` `code` `` for commands or model ids. Nothing else.
 - `url` is the source page. It is added as the last line, a
-  small blue link.
+  small blue clickable link.
+- The box is one bulleted list: the red bold headline is
+  its first item, then the bullets, then the link. The
+  script does this; do not type dots yourself.
 - `image`: `{"shot": url}` screenshots a page, and is the
   usual choice. `{"src": url}` downloads an image file.
   Leave it out and the source page is screenshotted.
