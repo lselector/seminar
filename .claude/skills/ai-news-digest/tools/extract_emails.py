@@ -1,9 +1,10 @@
 """
-Extract plain text from recent messages in a Postbox
-(Thunderbird-style) mbox mail folder.
+Extract plain text from recent messages in a Thunderbird
+mbox mail folder.
 
-Postbox stores each mail folder as a single mbox file.
-This tool splits that file on the Postbox separator line
+Thunderbird (like Postbox before it, until 2026-09-29)
+stores each mail folder as a single mbox file. This tool
+splits that file on the separator line
 ("From - <date>" or a bare "From "), keeps messages from the last N days,
 converts HTML bodies to plain text, and collects article
 links together with their anchor text.
@@ -19,13 +20,13 @@ Usage:
   python3 extract_emails.py --days 7 --max-chars 8000
 
 Notes:
-  Reading is read-only and safe while Postbox runs, but a
+  Reading is read-only and safe while Thunderbird runs, but a
   live folder may end mid-message; that block is skipped.
   Do NOT parse these files with mailbox.mbox: it splits on
   any "From " line and shreds newsletters into fragments.
 
 Created: 2026-09-02
-Last updated: 2026-09-14
+Last updated: 2026-09-29
 """
 
 import argparse
@@ -42,12 +43,12 @@ from pathlib import Path
 from urllib.parse import unquote
 
 DEFAULT_MBOX = (
-    "~/Library/Application Support/PostboxApp/Profiles/"
-    "mfxvr37h.default/ImapMail/imap.gmail.com/"
+    "~/Library/Thunderbird/Profiles/hcuwvj59.main/"
+    "ImapMail/imap.gmail.com/"
     "my_gmail_folders.sbd/___Medium_Twitter"
 )
 
-# Postbox writes "From - <date>" before each message; newer
+# Thunderbird writes "From - <date>" before each message; newer
 # resynced folders use a bare "From " line (CRLF) instead.
 SEPARATOR = re.compile(rb"(?m)^From (?:- .*)?\r?\n")
 
@@ -197,7 +198,7 @@ def html_to_text(html):
 
 # --------------------------------------------------------------
 def split_mbox(raw):
-    """Split raw mbox bytes on the Postbox separator."""
+    """Split raw mbox bytes on the mbox separator."""
     return [p for p in SEPARATOR.split(raw) if p.strip()]
 
 

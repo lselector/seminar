@@ -1,11 +1,11 @@
 ---
 name: ai-news-digest
-description: Extract the last N days of AI/tech newsletters from the local Postbox mail folder and write a deduplicated markdown digest of the most important events, each with a short description and 1-2 source URLs. Use when the user asks for an AI news summary, a newsletter digest, "what happened in AI this week", or to summarize their ___Medium_Twitter email folder.
+description: Extract the last N days of AI/tech newsletters from the local Thunderbird mail folder and write a deduplicated markdown digest of the most important events, each with a short description and 1-2 source URLs. Use when the user asks for an AI news summary, a newsletter digest, "what happened in AI this week", or to summarize their ___Medium_Twitter email folder.
 ---
 
-# AI news digest from Postbox newsletters
+# AI news digest from Thunderbird newsletters
 
-Turn a week of AI newsletters sitting in Postbox into one
+Turn a week of AI newsletters sitting in Thunderbird into one
 ranked, deduplicated list of events.
 
 The mail folder holds roughly 10 newsletters per day from
@@ -22,7 +22,10 @@ python3 .claude/skills/ai-news-digest/tools/extract_emails.py \
 
 Run it from the repository root. Defaults point at the
 `___Medium_Twitter` folder of the `lev.selector@gmail.com`
-account, so normally no other flags are needed.
+account in Thunderbird, so normally no other flags are
+needed. Thunderbird must keep that folder for offline use
+(Account Settings, Synchronization & Storage), or the file
+holds headers only.
 
 The script prints one JSON line like this:
 
@@ -156,12 +159,15 @@ rumor or unconfirmed, label it.
 
 ## Notes
 
-- Reading is read-only and safe while Postbox is running. A
+- Reading is read-only and safe while Thunderbird is running. A
   live folder can end mid-message; that block is skipped.
 - Never parse these files with Python's `mailbox.mbox`. It
   splits on any line starting with `From `, which shreds 288
   real messages into 463 fragments. The script splits on the
-  Postbox separator `From - <date>` instead.
+  separator `From - <date>` instead.
+- Until 2026-09-29 the mail came from Postbox. Its old copy of
+  the folder is still readable with `--mbox`
+  `~/Library/Application Support/PostboxApp/Profiles/mfxvr37h.default/ImapMail/imap.gmail.com/my_gmail_folders.sbd/___Medium_Twitter`.
 - The window is measured back from the newest message in the
   folder, not from today, so a stale mailbox still returns a
   full week of news.
