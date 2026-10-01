@@ -1,16 +1,16 @@
 {
-  "fetched": "2026-09-27",
+  "fetched": "2026-09-30",
   "boards": [
     {
       "label": "English",
       "url": "https://arena.ai/leaderboard/text",
-      "cutoff": "2026-09-25",
+      "cutoff": "2026-09-30",
       "entries": [
         {
-          "name": "claude-opus-5.5-high",
-          "score": 1509,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-opus-5.5-high"
+          "name": "gemini-4-argon-high",
+          "score": 1525,
+          "vendor": "google",
+          "url": "https://arena.ai/leaderboard/model/gemini-4-argon-high"
         },
         {
           "name": "claude-opus-4-6-high",
@@ -20,9 +20,15 @@
         },
         {
           "name": "claude-fable-5-high",
-          "score": 1504,
+          "score": 1505,
           "vendor": "anthropic",
           "url": "https://arena.ai/leaderboard/model/claude-fable-5-high"
+        },
+        {
+          "name": "claude-opus-5.5-high",
+          "score": 1504,
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-opus-5.5-high"
         },
         {
           "name": "claude-opus-4-7-high",
@@ -38,33 +44,39 @@
         },
         {
           "name": "claude-opus-4-6",
-          "score": 1498,
+          "score": 1497,
           "vendor": "anthropic",
           "url": "https://arena.ai/leaderboard/model/claude-opus-4-6"
         },
         {
-          "name": "muse-spark-1.2 (xHigh)",
-          "score": 1496,
-          "vendor": "other",
-          "url": "https://arena.ai/leaderboard/model/muse-spark-1.2%20%28xHigh%29"
-        },
-        {
-          "name": "claude-opus-4-7",
-          "score": 1495,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-opus-4-7"
-        },
-        {
           "name": "muse-spark-1.3-max",
-          "score": 1494,
+          "score": 1495,
           "vendor": "other",
           "url": "https://arena.ai/leaderboard/model/muse-spark-1.3-max"
         },
         {
+          "name": "claude-opus-4-7",
+          "score": 1494,
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-opus-4-7"
+        },
+        {
+          "name": "muse-spark-1.2 (xHigh)",
+          "score": 1494,
+          "vendor": "other",
+          "url": "https://arena.ai/leaderboard/model/muse-spark-1.2%20%28xHigh%29"
+        },
+        {
           "name": "gemini-3.8-flash-high",
-          "score": 1492,
+          "score": 1494,
           "vendor": "google",
           "url": "https://arena.ai/leaderboard/model/gemini-3.8-flash-high"
+        },
+        {
+          "name": "muse-spark-1.1",
+          "score": 1492,
+          "vendor": "other",
+          "url": "https://arena.ai/leaderboard/model/muse-spark-1.1"
         },
         {
           "name": "claude-opus-5-high",
@@ -73,22 +85,16 @@
           "url": "https://arena.ai/leaderboard/model/claude-opus-5-high"
         },
         {
-          "name": "muse-spark-1.1",
-          "score": 1491,
-          "vendor": "other",
-          "url": "https://arena.ai/leaderboard/model/muse-spark-1.1"
+          "name": "claude-opus-5-max",
+          "score": 1489,
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-opus-5-max"
         },
         {
           "name": "muse-spark",
           "score": 1489,
           "vendor": "other",
           "url": "https://arena.ai/leaderboard/model/muse-spark"
-        },
-        {
-          "name": "claude-opus-5-max",
-          "score": 1488,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-opus-5-max"
         },
         {
           "name": "gemini-3.7-flash-high",
@@ -116,13 +122,13 @@
         },
         {
           "name": "gpt-5.6-sol-xhigh",
-          "score": 1483,
+          "score": 1484,
           "vendor": "openai",
           "url": "https://arena.ai/leaderboard/model/gpt-5.6-sol-xhigh"
         },
         {
           "name": "gemini-3.6-flash-high",
-          "score": 1482,
+          "score": 1483,
           "vendor": "google",
           "url": "https://arena.ai/leaderboard/model/gemini-3.6-flash-high"
         },
@@ -134,35 +140,41 @@
         },
         {
           "name": "claude-opus-4-8-high",
-          "score": 1480,
+          "score": 1481,
           "vendor": "anthropic",
           "url": "https://arena.ai/leaderboard/model/claude-opus-4-8-high"
+        },
+        {
+          "name": "qwen3.8-max",
+          "score": 1481,
+          "vendor": "opensource",
+          "url": "https://arena.ai/leaderboard/model/qwen3.8-max"
         },
         {
           "name": "mimo-v2.6-pro",
           "score": 1480,
           "vendor": "other",
           "url": "https://arena.ai/leaderboard/model/mimo-v2.6-pro"
-        },
-        {
-          "name": "glm-5.3-max",
-          "score": 1480,
-          "vendor": "opensource",
-          "url": "https://arena.ai/leaderboard/model/glm-5.3-max"
-        },
-        {
-          "name": "qwen3.8-max",
-          "score": 1479,
-          "vendor": "opensource",
-          "url": "https://arena.ai/leaderboard/model/qwen3.8-max"
         }
       ]
     },
     {
       "label": "Coding",
       "url": "https://arena.ai/leaderboard/text/coding",
-      "cutoff": "2026-09-25",
+      "cutoff": "2026-09-30",
       "entries": [
+        {
+          "name": "gemini-4-argon-high",
+          "score": 1559,
+          "vendor": "google",
+          "url": "https://arena.ai/leaderboard/model/gemini-4-argon-high"
+        },
+        {
+          "name": "claude-fable-5-high",
+          "score": 1552,
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-fable-5-high"
+        },
         {
           "name": "claude-opus-4-6-high",
           "score": 1551,
@@ -176,22 +188,10 @@
           "url": "https://arena.ai/leaderboard/model/claude-opus-4-7-high"
         },
         {
-          "name": "claude-fable-5-high",
-          "score": 1551,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-fable-5-high"
-        },
-        {
           "name": "claude-opus-4-6",
-          "score": 1548,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-opus-4-6"
-        },
-        {
-          "name": "claude-opus-5.5-high",
           "score": 1547,
           "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-opus-5.5-high"
+          "url": "https://arena.ai/leaderboard/model/claude-opus-4-6"
         },
         {
           "name": "claude-opus-4-7",
@@ -200,22 +200,22 @@
           "url": "https://arena.ai/leaderboard/model/claude-opus-4-7"
         },
         {
+          "name": "kimi-k3-max",
+          "score": 1541,
+          "vendor": "opensource",
+          "url": "https://arena.ai/leaderboard/model/kimi-k3-max"
+        },
+        {
           "name": "mimo-v2.6-pro",
-          "score": 1543,
+          "score": 1540,
           "vendor": "other",
           "url": "https://arena.ai/leaderboard/model/mimo-v2.6-pro"
         },
         {
           "name": "gpt-6-astra-max",
-          "score": 1542,
+          "score": 1539,
           "vendor": "openai",
           "url": "https://arena.ai/leaderboard/model/gpt-6-astra-max"
-        },
-        {
-          "name": "kimi-k3-max",
-          "score": 1541,
-          "vendor": "opensource",
-          "url": "https://arena.ai/leaderboard/model/kimi-k3-max"
         },
         {
           "name": "muse-spark-1.3-max",
@@ -224,46 +224,52 @@
           "url": "https://arena.ai/leaderboard/model/muse-spark-1.3-max"
         },
         {
+          "name": "claude-opus-5.5-high",
+          "score": 1538,
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-opus-5.5-high"
+        },
+        {
           "name": "muse-spark-1.2 (xHigh)",
           "score": 1535,
           "vendor": "other",
           "url": "https://arena.ai/leaderboard/model/muse-spark-1.2%20%28xHigh%29"
         },
         {
-          "name": "claude-opus-4-8-high",
-          "score": 1534,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-opus-4-8-high"
-        },
-        {
-          "name": "claude-opus-5-high",
-          "score": 1533,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-opus-5-high"
-        },
-        {
           "name": "muse-spark-1.1",
-          "score": 1532,
+          "score": 1534,
           "vendor": "other",
           "url": "https://arena.ai/leaderboard/model/muse-spark-1.1"
         },
         {
-          "name": "deepseek-v4.1-flash-max",
+          "name": "gpt-5.6-sol-xhigh",
+          "score": 1534,
+          "vendor": "openai",
+          "url": "https://arena.ai/leaderboard/model/gpt-5.6-sol-xhigh"
+        },
+        {
+          "name": "claude-opus-5-high",
+          "score": 1534,
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-opus-5-high"
+        },
+        {
+          "name": "claude-opus-4-8-high",
+          "score": 1533,
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-opus-4-8-high"
+        },
+        {
+          "name": "claude-fable-5.1-max",
           "score": 1532,
-          "vendor": "opensource",
-          "url": "https://arena.ai/leaderboard/model/deepseek-v4.1-flash-max"
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-fable-5.1-max"
         },
         {
           "name": "gemini-3.8-flash-high",
-          "score": 1532,
+          "score": 1531,
           "vendor": "google",
           "url": "https://arena.ai/leaderboard/model/gemini-3.8-flash-high"
-        },
-        {
-          "name": "gpt-5.6-sol-xhigh",
-          "score": 1531,
-          "vendor": "openai",
-          "url": "https://arena.ai/leaderboard/model/gpt-5.6-sol-xhigh"
         },
         {
           "name": "claude-opus-4-5-20251101-high-32k",
@@ -278,16 +284,22 @@
           "url": "https://arena.ai/leaderboard/model/claude-opus-4-8"
         },
         {
+          "name": "claude-opus-5-max",
+          "score": 1530,
+          "vendor": "anthropic",
+          "url": "https://arena.ai/leaderboard/model/claude-opus-5-max"
+        },
+        {
           "name": "muse-spark",
           "score": 1530,
           "vendor": "other",
           "url": "https://arena.ai/leaderboard/model/muse-spark"
         },
         {
-          "name": "claude-fable-5.1-max",
+          "name": "deepseek-v4.1-flash-max",
           "score": 1529,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-fable-5.1-max"
+          "vendor": "opensource",
+          "url": "https://arena.ai/leaderboard/model/deepseek-v4.1-flash-max"
         },
         {
           "name": "claude-sonnet-4-6",
@@ -296,20 +308,8 @@
           "url": "https://arena.ai/leaderboard/model/claude-sonnet-4-6"
         },
         {
-          "name": "claude-opus-5-max",
-          "score": 1529,
-          "vendor": "anthropic",
-          "url": "https://arena.ai/leaderboard/model/claude-opus-5-max"
-        },
-        {
-          "name": "mimo-v2.6-flash",
-          "score": 1525,
-          "vendor": "other",
-          "url": "https://arena.ai/leaderboard/model/mimo-v2.6-flash"
-        },
-        {
           "name": "qwen3.7-max-preview",
-          "score": 1525,
+          "score": 1524,
           "vendor": "opensource",
           "url": "https://arena.ai/leaderboard/model/qwen3.7-max-preview"
         }
