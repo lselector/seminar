@@ -1,33 +1,30 @@
-Claude now runs a quarter of the lab that makes Claude.
-Anthropic's AI does 26% of Anthropic's homework.
-30,000 agents at work, and 1 in 47,000 told to stop.
-Every safety number this week was graded by the student.
-Amodei says pace it, Huang says ship it. Both say trust us.
-The slowdown debate has two speeds: cautious and Nvidia.
-
-A model that cannot write just judged 500 evals for 34 cents.
-Jev cannot spell. It decides, and it decides for pennies.
-Six clones in two days. Imitation trains faster than models.
-Your agent's bill is not the model. It is the harness.
-
-Same model, same task, five times the price. Blame the harness.
-A 54 GB model went on a diet and came back as 5.9.
-Ternary weights: minus one, zero, plus one, and your laptop.
-Claude broke into OpenAI, politely, for a $6,500 bounty.
-
-Fourteen hours from report to patch. The break-in took less.
-Meta's agent called Xfinity and came back $40 richer.
-The family agent has its own Google account and your calendar.
-Six people, one agent, no more arguments about the calendar.
-Protein modeling got 4x faster and a million in credits.
-Dream-RSI: 162x fewer agent calls, the rest rehearsed offline.
-The cheapest frontier model this week was free and anonymous.
-Open weights, 256K context, no bill. Someone is buying attention.
-Bolt offers 50x more runs if open models do the typing.
-Translation lag fell to 2.3 seconds. Small talk still lags.
-Sixty languages in, twenty-nine out. The accent costs extra.
-OpenClaw tests the update on a copy of you before touching you.
-4,179 pull requests, 502 people, one update that rolls back.
-Agents got a heads-up display. The human kept the off switch.
-The user charts need a wider axis every quarter now.
-Everything sped up this week except the argument about speed.
+Broadcom lends Anthropic money to rent Broadcom chips. Circle of life.
+Six labs signed a safety pact and picked their own referees.
+Morally binding: a contract with every clause except penalties.
+Tuesday a safety pact, Wednesday a subpoena.
+The auditor got a seat at the table, then a letter from the FTC.
+Your ChatGPT plan now has a social life.
+Bring your own compute: a potluck where everyone brings GPUs.
+DGX Spark 64GB: half the memory, 72% of the price.
+Argon is a noble gas. It still topped both Arena boards.
+XP turned 27. The agents just discovered pair programming.
+Kent Beck wrote tests first. Agents still write them last.
+Seven hours, a 2,700-line spec, zero coffee breaks.
+AIDE² tried 100 upgrades on itself and kept seven. A modest machine.
+An AI improved its own design. Humans still wrote the blog post.
+Manus gave its agent a wallet. Expense reports are next.
+Agents now have phone numbers. Robocalls are about to get a reply.
+Basecamp took 380 hours to build. The AI roadmap meeting took more.
+Constraints build products. Unlimited budgets build roadmaps.
+JitMem reads the textbook after seeing the exam question.
+A 125B model on a gaming PC. The fans have opinions.
+Alibaba V900: 216 GB of memory, zero GB of benchmarks.
+TPUs in orbit. The cloud finally lives up to its name.
+Live captions in 100 ms. Your "um" is now real time.
+Lights-out coding works until someone needs the light switch.
+Passing tests is not the same as knowing why they pass.
+AI job postings doubled. Communication still tops the skills list.
+Agents got wallets this week. Their makers got subpoenas.
+Raw footage to finished video in ten minutes. Thumbnail: one hour.
+A trillion tokens a day, and switching costs one base URL.
+Small teams, small releases, very large models.
