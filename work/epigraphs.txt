@@ -1,30 +1,30 @@
-Broadcom lends Anthropic money to rent Broadcom chips. Circle of life.
-Six labs signed a safety pact and picked their own referees.
-Morally binding: a contract with every clause except penalties.
-Tuesday a safety pact, Wednesday a subpoena.
-The auditor got a seat at the table, then a letter from the FTC.
-Your ChatGPT plan now has a social life.
-Bring your own compute: a potluck where everyone brings GPUs.
-DGX Spark 64GB: half the memory, 72% of the price.
-Argon is a noble gas. It still topped both Arena boards.
-XP turned 27. The agents just discovered pair programming.
-Kent Beck wrote tests first. Agents still write them last.
-Seven hours, a 2,700-line spec, zero coffee breaks.
-AIDE² tried 100 upgrades on itself and kept seven. A modest machine.
-An AI improved its own design. Humans still wrote the blog post.
-Manus gave its agent a wallet. Expense reports are next.
-Agents now have phone numbers. Robocalls are about to get a reply.
-Basecamp took 380 hours to build. The AI roadmap meeting took more.
-Constraints build products. Unlimited budgets build roadmaps.
-JitMem reads the textbook after seeing the exam question.
-A 125B model on a gaming PC. The fans have opinions.
-Alibaba V900: 216 GB of memory, zero GB of benchmarks.
-TPUs in orbit. The cloud finally lives up to its name.
-Live captions in 100 ms. Your "um" is now real time.
-Lights-out coding works until someone needs the light switch.
-Passing tests is not the same as knowing why they pass.
-AI job postings doubled. Communication still tops the skills list.
-Agents got wallets this week. Their makers got subpoenas.
-Raw footage to finished video in ten minutes. Thumbnail: one hour.
-A trillion tokens a day, and switching costs one base URL.
-Small teams, small releases, very large models.
+Seven hundred math papers, three hours each. Peer review is not ready.
+Google built a model that writes a million tokens. Few will read them.
+The newest models answer in a million tokens, or in zero.
+Decision models skip the essay and just pick an answer.
+Agents now work the night shift. Devin even dreams.
+Your agent keeps working after you log off. So does your bill.
+Le Chonk: a trillion parameters, and the name does the marketing.
+We renamed AI to SI. The models did not notice.
+Same models, new acronym, now with a task force.
+Agents now use five times our tokens. At least they read the docs.
+Math used to scale with mathematicians. Now it scales with GPUs.
+Open weights this week: 78B, 501B, a trillion. Bring a bigger SSD.
+The frontier is now a pricing page: $2 in, $10 out.
+Three labs, three frontier models, one price.
+Agents got cloud computers. The kernel got a bouncer.
+An AI improved its own harness. Engineers took notes.
+Kent Beck still has it right: code volume is not progress.
+Basecamp took 380 hours. Our agent took seven, and a spec.
+125 billion parameters on a gaming PC. The SSD is doing its best.
+Agents got memory, dreams and wallets. Next, opinions.
+A model you can't use yet tops the leaderboard you can read.
+Proof first, peer review later, Lean in between.
+The new job skill: managing workers who never sleep.
+One photo in, a 3D world out, before your coffee cools.
+Sign in with ChatGPT, and your plan pays for other apps.
+Ask not what your agent can do. Ask what it already did.
+The week AI wrote math papers and nobody could grade them.
+Faster, cheaper, always on. Nobody said supervised.
+Open weights from the US, France and Germany. China still leads.
+Copilot used to live in Word. Now Word lives in Copilot.
