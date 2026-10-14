@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Extract top 25 from Arena AI leaderboards.
 
-Usage:
-  python sources/leaderboard.py
+Usage (from work/):
+  python -m sources.leaderboard
 
 Description:
   Fetches the Arena AI leaderboard pages
-  using curl, extracts the top 25 models
+  in a visible Chrome window (Cloudflare
+  blocks curl), extracts the top 25 models
   with their scores, and saves results
   into Excel files (.xlsx) and one JSON
   file.
@@ -29,20 +30,21 @@ Requirements:
   pip install openpyxl
 
 Created: 2026-07-10
-Last updated: 2026-09-12
+Last updated: 2026-10-14
 """
 
 import datetime as dt
 import json
 import re
 import os
-import subprocess
 import sys
 from urllib.parse import quote
 from openpyxl import Workbook
 from openpyxl.styles import (
     Font, PatternFill, Alignment
 )
+
+from sources import element_shot as E
 
 # work/data, whatever directory the command runs from.
 DATA_DIR = os.path.join(
@@ -99,17 +101,17 @@ VENDOR_COLORS = {
 
 # --------------------------------------------------------------
 def fetch_html(url):
-    """Fetch HTML content from a URL."""
-    result = subprocess.run(
-        ["curl", "-s", url],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if result.returncode != 0:
+    """Fetch a board's HTML in a visible Chrome window.
+
+    Cloudflare stops curl and headless Chrome with a
+    JavaScript challenge; a real window passes it.
+    """
+    html = E.page_html(url, "voteCutoffISOString",
+                       visible=True)
+    if not html:
         print(f"Error fetching {url}")
         sys.exit(1)
-    return result.stdout
+    return html
 
 # --------------------------------------------------------------
 def extract_entries(html):

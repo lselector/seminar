@@ -61,7 +61,7 @@ cat > /tmp/toc.json <<'EOF'
   "Coding - https://lmarena.ai/leaderboard/text/coding": "Crowd-sourced LM Arena",
   "OpenAI shelves its 2026 IPO as Anthropic heads to Nasdaq": "OpenAI Delays IPO, Anthropic to Nasdaq",
   "Tech Layoffs by year (US only):": "Jobs & Layoffs",
-  "Sept 10": "-"
+  "Benchmarks and cost:": "-"
 }}
 EOF
 python3 g3_update_toc.py --json /tmp/toc.json
@@ -75,7 +75,8 @@ Rules for labels, as in the archive decks:
 - Give several boxes of one slide the same label to list
   them once (benchmarks, layoffs).
 - `"-"` leaves out a line that is not a topic, such as a
-  date or a sub-heading.
+  sub-heading. A box holding only a date (`Oct 8`, when a
+  slide was updated) is left out by the script itself.
 
 Labels are appended to the contents slide's speaker notes,
 so later plain runs keep them. Only new headlines need one.

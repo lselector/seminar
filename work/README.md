@@ -133,7 +133,9 @@ contents box a different colour, or clear its fill, and the
 whole contents is yours. Step 3 takes
 short labels in `toc.json` (`{"toc": {headline: label}}`,
 `"-"` leaves a line out) and keeps them in that slide's
-speaker notes; a headline with no label is cut to fit.
+speaker notes; a headline with no label is cut to fit. A box
+holding only a date (`Oct 8`) marks when a slide was updated
+and is never listed.
 
 ## The deck
 

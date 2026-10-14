@@ -11,7 +11,8 @@ chart, say), scrolls it into view so lazy charts draw, and
 captures just that rectangle at twice the pixel density.
 shoot_region captures from a CSS selector's element down,
 in a given width:height shape (a YouTube channel tab).
-page_text reads a page's visible text the same way.
+page_text reads a page's visible text the same way, and
+page_html its full HTML.
 
 Usage:
     from sources.element_shot import shoot_element
@@ -21,7 +22,7 @@ Usage:
         "Cost per Intelligence Index Task", "/tmp/chart.png")
 
 Created: 2026-09-14
-Last updated: 2026-09-27
+Last updated: 2026-10-14
 """
 
 import base64
@@ -283,21 +284,35 @@ def shoot_region(url, selector, aspect, path,
 
 
 # --------------------------------------------------------------
-def page_text(url, marker, visible=False):
-    """The page's visible text once marker shows; or None."""
+def read_page(url, marker, expression, visible=False):
+    """Evaluate expression once its value holds marker."""
     if not os.path.isfile(F.CHROME):
         F.log_message(f"  Chrome not found at {F.CHROME}")
         return None
-    probe = ("document.body && document.body.innerText"
+    probe = (f"({expression} || '')"
              f".includes({json.dumps(marker)})")
     try:
         with browser(visible) as cdp:
             open_page(cdp, url)
             wait_for(cdp, probe, repr(marker))
-            return cdp.js("document.body.innerText")
+            return cdp.js(expression)
     except ERRORS as exc:
         F.log_message(f"  could not read {url}: {exc}")
         return None
+
+
+# --------------------------------------------------------------
+def page_text(url, marker, visible=False):
+    """The page's visible text once marker shows; or None."""
+    return read_page(url, marker, "document.body?.innerText",
+                     visible)
+
+
+# --------------------------------------------------------------
+def page_html(url, marker, visible=False):
+    """The page's HTML, scripts included, once marker shows."""
+    return read_page(url, marker,
+                     "document.documentElement.outerHTML", visible)
 
 
 # --------------------------------------------------------------

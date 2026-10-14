@@ -4,9 +4,11 @@ Step 3: rebuild the table of contents on the first slide.
 
 Walks the talk from the first slide to the separator, in the
 order the slides are in right now, and collects the first
-line of every text box: the script's and yours alike. Titles
-and empty placeholders are skipped, and so are the slides
-the archive decks leave out of the contents: the script's
+line of every text box: the script's and yours alike. Titles,
+empty placeholders and boxes holding only a date ("Oct 8",
+when a slide was last updated) are skipped, and so are the
+slides the archive decks leave out of the contents: the
+script's
 Benchmarks page, the YouTube promo, About the Speaker and
 Thank You. On your own benchmarks page (the Code | Model |
 Score tables) only the board captions count, the boxes with
@@ -26,7 +28,7 @@ pass labels for headlines; "-" leaves a headline out, and
 headlines given the same label are listed once:
 
     {"toc": {"English - https://lmarena.ai/...": "LM Arena",
-             "Sept 10": "-"},
+             "Coding - https://lmarena.ai/...": "LM Arena"},
      "epigraph": "Agents got their own computers."}
 
 Labels are kept in the contents slide's speaker notes, so a
@@ -48,7 +50,7 @@ Usage:
     python3 g3_update_toc.py --json toc.json  labels, epigraph
 
 Created: 2026-09-14
-Last updated: 2026-09-25
+Last updated: 2026-10-11
 """
 
 import re
@@ -189,6 +191,8 @@ def headlines(deck):
                     ARENA_LINK not in shape.text:
                 continue
             line = headline(shape)
+            if W.DATE_WORDS.fullmatch(line):
+                continue
             if line and line not in lines:
                 lines.append(line)
     return lines

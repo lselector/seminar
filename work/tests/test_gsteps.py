@@ -191,6 +191,25 @@ def test_toc_counts_a_box_just_under_a_hand_made_title():
                   slides=slides)
     assert TOC.headlines(deck) == ["Intelligence Index"]
 
+
+# --------------------------------------------------------------
+def test_toc_skips_a_box_holding_only_a_date():
+    """'Oct 8' marks when a slide was updated; not a topic."""
+    def box(oid, y, text):
+        """A hand-made text box on the test slide."""
+        return G.Shape(id=oid, slide="g_aa", kind=G.KIND_TEXT,
+                       text=text, rect=L.Rect(0.1, y, 4, 0.3))
+    shapes = [box("g_title", 0.002, "Intelligence Index"),
+              box("g_date", 0.5, "Oct 8"),
+              box("g_note", 1.0, "Data for Oct 8 shows a jump")]
+    slides = [G.Slide(id="s-toc", index=0),
+              G.Slide(id="g_aa", index=1, shapes=shapes)]
+    deck = G.Deck(id="d", title="t", revision="r",
+                  slides=slides)
+    lines = TOC.headlines(deck)
+    assert lines == ["Data for Oct 8 shows a jump"], lines
+
+
 # --------------------------------------------------------------
 def test_toc_takes_only_the_captions_from_the_bench_tables():
     """Model sizes, notes and the date are not topics."""
