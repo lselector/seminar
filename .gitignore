@@ -14,7 +14,7 @@
 **/token.json
 **/credentials/
 **/myprompts*.*
-**/data/
+**/data
 **/email_migration*.*
 .claude/settings.local.json
 **/*.jsonl
