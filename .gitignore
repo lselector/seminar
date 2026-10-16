@@ -18,3 +18,5 @@
 **/email_migration*.*
 .claude/settings.local.json
 **/*.jsonl
+work/epigraphs.txt
+
