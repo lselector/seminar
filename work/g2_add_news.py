@@ -38,9 +38,17 @@ Usage:
     python3 g2_add_news.py --json news.json --dry-run
     python3 g2_add_news.py --json news.json
     python3 g2_add_news.py 2026-09-18 --json news.json
+    python3 g2_add_news.py --json news.json --redraw
+
+--redraw draws topics added before again, in the current box
+format. It touches a topic only when this script added it
+(it is in the ledger), its box is still unfilled and in the
+talk, and its slide holds nothing but such boxes. Those
+slides are removed and the topics laid out again in their
+place, with the same ids, so the ledger stays as it is.
 
 Created: 2026-09-14
-Last updated: 2026-09-14
+Last updated: 2026-10-20
 """
 
 import sys
@@ -231,10 +239,10 @@ def place(deck, pages, locate):
 
 
 # --------------------------------------------------------------
-def report(fresh, skipped):
+def report(fresh, skipped, verb="new"):
     """Say what will be added and what was skipped."""
     for block, _ in fresh:
-        log(f"{LABEL}: new      {block.headline}")
+        log(f"{LABEL}: {verb:8s} {block.headline}")
     for headline, reason in skipped:
         log(f"{LABEL}: skipped  {headline}  ({reason})")
 
@@ -258,6 +266,101 @@ def plan_for(topics, locate):
         batches.append(("ledger",
                         ledger_requests(deck, placed, keys)))
         return batches
+
+    return plan
+
+
+# --------------------------------------------------------------
+def redraw_blocker(deck, key, ledger):
+    """Why a topic's box cannot be redrawn, or None."""
+    if key not in ledger:
+        return "not added by this script (not in the ledger)"
+    box = deck.shape(T.shape_id(key, T.BOX))
+    if not box:
+        return "its box is gone (deleted or renamed)"
+    if not deck.editable(box):
+        return "filled by you, or parked"
+    if box.slide in {sid for sid, _ in PLACEHOLDER_PAGES}:
+        return "on a placeholder slide, which is never removed"
+    return None
+
+
+# --------------------------------------------------------------
+def slide_is_ours(deck, slide_id, keys):
+    """Does a slide hold only the script's shapes of keys?"""
+    slide = deck.slide(slide_id)
+    if not slide or not T.owned(slide_id):
+        return False
+    for shape in slide.shapes:
+        if shape.id.endswith(f"-{T.TITLE}"):
+            continue
+        if not deck.editable(shape) or \
+                T.topic_of(shape.id) not in keys:
+            return False
+    return True
+
+
+# --------------------------------------------------------------
+def select_redraw(topics, deck):
+    """Topics to redraw, skipped ones, and their slides.
+
+    A topic is redrawn only when this script added it, its
+    box is unfilled and in the talk, and its slide holds
+    nothing but the script's boxes of topics being redrawn,
+    so deleting the slide loses nothing of the author's.
+    """
+    ledger = {k for k, _ in read_ledger(deck)}
+    chosen, skipped = [], []
+    for block, spec in topics:
+        key = T.block_key(block)
+        reason = redraw_blocker(deck, key, ledger)
+        if reason:
+            skipped.append((block.headline, reason))
+        else:
+            chosen.append((block, spec))
+    keys = {T.block_key(b) for b, _ in chosen}
+    homes = {b.headline: deck.shape(
+        T.shape_id(T.block_key(b), T.BOX)).slide
+        for b, _ in chosen}
+    mixed = {sid for sid in homes.values()
+             if not slide_is_ours(deck, sid, keys)}
+    for block, _ in [c for c in chosen
+                     if homes[c[0].headline] in mixed]:
+        skipped.append((block.headline,
+                        "its slide holds other things"))
+    chosen = [c for c in chosen
+              if homes[c[0].headline] not in mixed]
+    slides = {homes[b.headline] for b, _ in chosen}
+    return chosen, skipped, slides
+
+
+# --------------------------------------------------------------
+def redraw_for(topics, locate):
+    """Planning function that rebuilds topics' slides."""
+
+    # --------------------------------------
+    def plan(deck):
+        """Remove the topics' slides, then lay them out anew."""
+        chosen, skipped, slides = select_redraw(topics, deck)
+        report(chosen, skipped, "redraw")
+        if not chosen:
+            return []
+        at = min(deck.slide(sid).index for sid in slides)
+        gone = set(slides)
+        for sid in slides:
+            gone |= {s.id for s in deck.slide(sid).shapes}
+        taken = set(deck.ids()) - gone
+        section = Section(title=NEWS_TITLE,
+                          blocks=[b for b, _ in chosen])
+        draws = []
+        for n, page in enumerate(L.paginate([section])):
+            keys = [T.block_key(i.block) for i in page.items]
+            sid = T.make_unique(T.page_key(page), taken)
+            draws += insert_page(sid, at + n, page, keys, locate)
+        removes = [r for sid in sorted(slides)
+                   for r in S.delete_object(sid)]
+        return [("redraw: remove", removes),
+                ("redraw: draw", draws)]
 
     return plan
 
@@ -302,33 +405,43 @@ def list_known(step):
 
 
 # --------------------------------------------------------------
-def run(step, topics, dry_run):
-    """Fetch pictures for new topics, then write them."""
+def run(step, topics, dry_run, redraw=False):
+    """Fetch pictures for new topics, then write them.
+
+    With redraw, the topics are ones added before, and their
+    slides are drawn again in the current box format.
+    """
     deck = G.read_deck(step.slides, step.deck_id)
-    fresh, skipped = select(topics, deck)
+    if redraw:
+        fresh, skipped, _ = select_redraw(topics, deck)
+    else:
+        fresh, skipped = select(topics, deck)
     if dry_run or not fresh:
-        report(fresh, skipped)
-        log(f"{LABEL}: {len(fresh)} new, {len(skipped)} "
+        verb = "redraw" if redraw else "new"
+        report(fresh, skipped, verb)
+        log(f"{LABEL}: {len(fresh)} {verb}, {len(skipped)} "
             f"skipped{' (dry run)' if dry_run else ''}")
         return
     folder = workdir()
     host = Host(step.drive, step.folder_id)
     try:
         fetch_pictures(fresh, folder)
+        make = redraw_for if redraw else plan_for
         sent = W.run_plan(step.slides, step.deck_id,
-                          plan_for(fresh, locator(host)), LABEL)
+                          make(fresh, locator(host)), LABEL)
     finally:
         host.clean()
         remove_workdir(folder)
     if sent > 0:
-        log(f"{LABEL}: added ({sent} requests). Run "
+        done = "redrawn" if redraw else "added"
+        log(f"{LABEL}: {done} ({sent} requests). Run "
             f"g3_update_toc.py to refresh the contents.")
 
 
 # --------------------------------------------------------------
 def main():
     """Add news topics to one deck."""
-    flags = {"--list", "--dry-run"}
+    flags = {"--list", "--dry-run", "--redraw"}
     argv = [a for a in sys.argv[1:] if a not in flags]
     step = start("Add news topics", argv)
     if "--list" in sys.argv:
@@ -337,7 +450,8 @@ def main():
     data = load_json(step.args.json)
     items = data["topics"] if isinstance(data, dict) else data
     topics = [to_topic(item) for item in items]
-    run(step, topics, "--dry-run" in sys.argv)
+    run(step, topics, "--dry-run" in sys.argv,
+        "--redraw" in sys.argv)
 
 
 # --------------------------------------------------------------

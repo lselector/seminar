@@ -73,10 +73,15 @@ Rules for each topic, the same as the archive decks:
 - `**bold**` for the key fact, `==highlight==` for a number,
   `` `code` `` for commands or model ids. Nothing else.
 - `url` is the source page. It is added as the last line, a
-  small blue clickable link.
+  small clickable link in the deck's link colour.
 - The box is one bulleted list: the red bold headline is
   its first item, then the bullets, then the link. The
   script does this; do not type dots yourself.
+- The script draws each box in the author's format (4.88 in
+  wide, Calibri 12, 12 pt headline, the author's bullet
+  indents), with a red border and no fill, so it shows
+  white. Never give a new box a fill: a fill means the
+  author accepted it.
 - `image`: `{"shot": url}` screenshots a page, and is the
   usual choice. `{"src": url}` downloads an image file.
   Leave it out and the source page is screenshotted.
@@ -94,6 +99,11 @@ The dry run lists each topic as `new` or `skipped` with the
 reason. A skipped topic is not an error: it means the author
 already has it, parked it, or deleted it. Do not reword a
 skipped topic to get it past the check.
+
+To redraw topics added earlier in the current box format
+(for example after the format changed), run the same JSON
+with `--redraw`, dry run first. It rebuilds only slides that
+hold nothing but unfilled script boxes of those topics.
 
 ## Step 6: refresh the contents
 

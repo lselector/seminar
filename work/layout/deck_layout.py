@@ -35,7 +35,7 @@ Usage:
         print(page.title, len(page.items))
 
 Created: 2026-09-12
-Last updated: 2026-09-27
+Last updated: 2026-10-20
 """
 
 from dataclasses import dataclass, field
@@ -59,9 +59,12 @@ BAND_TOP = 0.46
 BAND_BOT = 5.53
 
 CONTENT_W = SLIDE_W - 2 * MARGIN
-IMG_W = 3.60
 COL_GAP = 0.12
-TEXT_W_IMG = CONTENT_W - IMG_W - COL_GAP
+# A news box matches the author's own yellow boxes: 4.88 in
+# wide once gslides.render adds the Slides padding, with or
+# without a picture. The picture takes the rest of the row.
+TEXT_W_IMG = 4.78
+IMG_W = CONTENT_W - TEXT_W_IMG - COL_GAP
 TEXT_W_FULL = CONTENT_W
 
 # The author page: a large picture on the left with the
@@ -312,9 +315,15 @@ def is_profile(block):
 
 # --------------------------------------------------------------
 def headline_size(block, size_pt):
-    """Size of one block's bold headline."""
+    """Size of one block's bold headline.
+
+    A news headline is the size of its bullets, as in the
+    author's boxes.
+    """
     if is_profile(block):
         return size_pt + PROFILE_HEADLINE_EXTRA
+    if is_news(block):
+        return size_pt
     return size_pt + HEADLINE_EXTRA
 
 
@@ -335,7 +344,9 @@ def text_width_for(block):
         return PROFILE_TEXT_W
     if is_promo(block):
         return PROMO_TEXT_W
-    return TEXT_W_IMG if block.image else TEXT_W_FULL
+    if is_closing(block):
+        return TEXT_W_FULL
+    return TEXT_W_IMG
 
 
 # --------------------------------------------------------------

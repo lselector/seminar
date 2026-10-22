@@ -24,7 +24,7 @@ Usage:
     reqs += style_span("box1", 0, 5, size=12, bold=True)
 
 Created: 2026-09-14
-Last updated: 2026-09-16
+Last updated: 2026-10-20
 """
 
 EMU_PER_INCH = 914400
@@ -142,9 +142,11 @@ def style_span(box_id, start, end, size=None, bold=False,
                              "unit": "PT"}
         fields.append("fontSize")
     if colour:
-        style["foregroundColor"] = {
-            "opaqueColor": rgb(colour)
-        }
+        # A name such as "HYPERLINK" is a theme colour.
+        style["foregroundColor"] = {"opaqueColor": (
+            {"themeColor": colour} if isinstance(colour, str)
+            else rgb(colour)
+        )}
         fields.append("foregroundColor")
     if font:
         style["fontFamily"] = font
@@ -183,12 +185,11 @@ def bullets(box_id, start, end):
 
 # --------------------------------------------------------------
 def hanging_indent(box_id, start, end, indent=0.1875,
-                   glyph=0.06):
+                   glyph=0.125):
     """Line up a wrapped bullet under its first word.
 
-    glyph is where the list bullet sits. Slides draws the dot
-    just left of that point, so 0.06in lines it up with the
-    headline above (rendered 2026-09-16).
+    glyph is where the list bullet sits: 9 pt, with the text
+    at 13.5 pt, as in the author's own boxes.
     """
     if end <= start:
         return []

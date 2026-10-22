@@ -30,7 +30,7 @@ Usage:
                           fill=None, locate=my_locator)
 
 Created: 2026-09-14
-Last updated: 2026-09-27
+Last updated: 2026-10-20
 """
 
 import os
@@ -50,6 +50,9 @@ BLACK = (0x00, 0x00, 0x00)
 RED = (0xFF, 0x00, 0x00)
 BLUE = (0x05, 0x63, 0xC1)
 CODE_BLUE = (0x3C, 0x78, 0xD8)
+# A topic's source link takes the deck theme's link colour,
+# as the links in the author's own boxes do.
+LINK_COLOUR = "HYPERLINK"
 YELLOW = (0xFF, 0xF2, 0xCC)
 GREY = (0x59, 0x59, 0x59)
 
@@ -165,7 +168,7 @@ def add_bullet(body, text, item):
     """Write one body line, as a list bullet or plain."""
     if is_link(text):
         body.run(text, size=L.link_size(item.size),
-                 colour=BLUE, font=FONT, link=text)
+                 colour=LINK_COLOUR, font=FONT, link=text)
     else:
         for chunk, style in split_markup(text):
             body.run(chunk, **piece_style(style, item.size))

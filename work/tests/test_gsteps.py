@@ -43,6 +43,7 @@ from gslides import write as W
 from gslides import ids as T
 from layout.deck_parser import Block
 from tests.test_gdeck import raw as skeleton_raw
+from tests.test_gdeck import fill as fill_box
 from tests.runner import run
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -151,6 +152,52 @@ def test_new_slides_go_before_layoffs_wherever_it_moved():
     deck = lived()
     assert NEWS.anchor_index(deck) == \
         deck.slide(T.PAGE_LAYOFFS).index
+
+
+# --------------------------------------------------------------
+def test_redraw_takes_only_script_slides_of_ledger_topics():
+    """Unfilled topics on their own slides are redrawn."""
+    picks = [topic("An Anthropic resignation turns into an "
+                   "extinction debate"),
+             topic("Meta ships Muse agent with its own cloud "
+                   "computer and browser"),
+             topic("A topic this script never added")]
+    chosen, skipped, slides = NEWS.select_redraw(
+        [(b, None) for b in picks], lived())
+    assert [b.headline for b, _ in chosen] == [picks[0].headline]
+    assert slides == {"s-an-anthropic-resignation-9e3c"}
+    reasons = dict(skipped)
+    assert "placeholder" in reasons[picks[1].headline]
+    assert "ledger" in reasons[picks[2].headline]
+
+
+# --------------------------------------------------------------
+def test_redraw_leaves_a_filled_topic_alone():
+    """A box the author filled is never redrawn."""
+    data = fill_box(copy.deepcopy(LIVED),
+                    "t-an-anthropic-resignation-turns-9e3c-b")
+    pick = topic("An Anthropic resignation turns into an "
+                 "extinction debate")
+    chosen, skipped, _ = NEWS.select_redraw(
+        [(pick, None)], G.parse_deck(data))
+    assert not chosen and "filled" in skipped[0][1]
+
+
+# --------------------------------------------------------------
+def test_redraw_removes_the_slide_then_draws_in_its_place():
+    """Same place, same box id, ledger untouched."""
+    deck = lived()
+    pick = topic("An Anthropic resignation turns into an "
+                 "extinction debate")
+    batches = NEWS.redraw_for([(pick, None)], None)(deck)
+    (first, removes), (second, draws) = batches
+    old = deck.slide("s-an-anthropic-resignation-9e3c")
+    assert removes == S.delete_object(old.id)
+    made = [r["createSlide"] for r in draws if "createSlide" in r]
+    assert made[0]["insertionIndex"] == old.index
+    assert "t-an-anthropic-resignation-turns-9e3c-b" in \
+        W.created(draws)
+    assert "ledger" not in first + second
 
 
 # --------------------------------------------------------------

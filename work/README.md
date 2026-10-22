@@ -96,6 +96,12 @@ deck, for example today's after 3 pm.
 | Deck text, epigraph ideas | `python3 g9_deck_text.py --out deck.md` | `/gslides-epigraphs` |
 | Contents as a topic list | `python3 g9_deck_text.py --toc --out topics.txt` | `/gslides-topics-extract` (YouTube folder) |
 
+To draw topics added earlier again in the current box
+format, run step 2 with `--redraw` and the same JSON. It
+only rebuilds slides that hold nothing but unfilled script
+boxes of those topics; a topic you filled, parked or share
+a slide with is reported and left alone.
+
 Steps 2 to 7 and 10 can run in any order, as often as you like.
 Running one twice either refreshes it or does nothing. Steps
 that need judgement (finding news, reading numbers off a web
@@ -113,7 +119,10 @@ Every text box a script writes is as tall as its text.
 Slides' "resize shape to fit text" cannot be switched on
 through the API (probed 2026-09-14: only `NONE` is
 accepted), so the scripts measure the text and set the
-height themselves. A box a script creates or rewrites gets
+height themselves. Any API write also switches it off: a
+duplicated box loses it, and so does one of your boxes the
+moment a script edits its text (probed 2026-10-20), so
+copying your boxes cannot keep it either. A box a script creates or rewrites gets
 exactly its text's height. A box a script only edits (a
 number, a date, one line) grows or shrinks by what the edit
 did to the text, so the padding you set by hand stays.

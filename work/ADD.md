@@ -319,11 +319,14 @@ rectangles; the author never positions anything.
    0.40 in; the rest goes to pictures.
 
 Geometry (inches): slide 10 x 5.625, margin 0.09, content
-band 0.46 to 5.53, text column 6.10 beside a 3.60 picture
-column. Titles Calibri 20 bold; headlines red bold; bullets
-Calibri 12 as a real bulleted list with a hanging indent;
-code Consolas 9 blue; links 9 pt blue. A news topic is one
-list: headline, bullets and link each carry a dot (since
+band 0.46 to 5.53. A news box matches the author's own
+yellow boxes (since 2026-10-20): 4.88 wide with the Slides
+padding, with or without a picture, beside a 4.92 picture
+column. Titles Calibri 20 bold; news headlines red bold at
+the bullet size; bullets Calibri 12 black as a real bulleted
+list, dot at 9 pt and text at 13.5 pt; code Consolas 9
+blue; links 9 pt in the theme's HYPERLINK colour. A news
+topic is one list: headline, bullets and link each carry a dot (since
 2026-09-27; promo, profile and closing pages keep an
 undotted headline and link). A Slides bullet takes the
 colour and size of the first character on its line, so the

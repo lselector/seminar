@@ -19,7 +19,7 @@ Usage:
     python3 -m tests.test_layout
 
 Created: 2026-09-12
-Last updated: 2026-09-12
+Last updated: 2026-10-20
 """
 
 from layout import deck_layout as L
@@ -432,7 +432,7 @@ def test_boxes_never_touch_the_title():
 # --------------------------------------------------------------
 def test_dense_slides_share_the_space_evenly():
     """Above, between and below come out the same."""
-    bullets = ["a fairly long sentence here " * 3] * 9
+    bullets = ["a fairly long sentence here " * 3] * 5
     blocks = [
         make_block(f"Headline {i}", bullets, "a.jpg")
         for i in range(2)
@@ -666,12 +666,12 @@ def test_huge_block_gets_a_smaller_font():
     assert pages[0].items[0].size < L.BASE_SIZE
 
 # --------------------------------------------------------------
-def test_block_without_image_gets_full_width():
-    """Text spans the slide when there is no picture."""
+def test_block_without_image_keeps_news_width():
+    """A news box is as wide without a picture as with one."""
     block = make_block("No picture", ["one bullet"])
     page = L.paginate([make_section([block])])[0]
     assert page.items[0].image is None
-    assert abs(page.items[0].text.w - L.TEXT_W_FULL) < 0.001
+    assert abs(page.items[0].text.w - L.TEXT_W_IMG) < 0.001
 
 # --------------------------------------------------------------
 def test_image_box_sits_right_of_the_text():
