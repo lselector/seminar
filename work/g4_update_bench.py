@@ -13,8 +13,11 @@ columns are rebuilt. Boxes you filled stay as they were.
 
 A slide you built by hand, with two tables whose header row
 reads Code | Model | Score: each table is filled in place
-from its board, matched by the caption above it ("English",
-"Coding"). A changed row gets the new model name and link,
+from its board, matched by the board's link in the caption
+above it ("LM Arena Text https://lmarena.ai/leaderboard/text",
+"LM Arena Coding .../leaderboard/text/coding"); without such
+a caption, boards go to tables left to right. A changed row
+gets the new model name and link,
 the vendor colour in its Code cell, and the score. The box
 holding a date ("Data for Sept 02") gets the cutoff date.
 Nothing else on that slide is touched: fonts, row heights,
@@ -27,14 +30,16 @@ Usage:
     python3 g4_update_bench.py --no-fetch      use cached JSON
 
 Created: 2026-09-14
-Last updated: 2026-09-18
+Last updated: 2026-10-25
 """
 
 import datetime as dt
 import json
 import os
+import re
 import subprocess
 import sys
+from urllib.parse import urlparse
 
 from layout import bench_page as B
 from gslides import api as S
@@ -49,6 +54,7 @@ from gslides.step import page_or_stop, report_frozen, start
 LEADERBOARD = os.path.join(DATA_DIR, "leaderboard.json")
 DATE_BOX = T.shape_id(T.PAGE_BENCH, "date")
 LABEL = "benchmarks"
+URL = re.compile(r"https?://\S+")
 
 # The hand-made tables use a lighter grey for other vendors.
 TABLE_COLORS = {**B.VENDOR_COLORS, "other": (0xD9, 0xD9, 0xD9)}
@@ -85,18 +91,32 @@ def cutoff_day(boards):
 
 
 # --------------------------------------------------------------
+def url_path(url):
+    """The path of a link, without a trailing slash."""
+    return urlparse(url).path.rstrip("/")
+
+
+# --------------------------------------------------------------
+def caption_for(page, board):
+    """The box linking to this board's page, or None."""
+    path = url_path(board.get("url", ""))
+    for shape in page.text_shapes():
+        if path and any(url_path(u) == path
+                        for u in URL.findall(shape.text)):
+            return shape
+    return None
+
+
+# --------------------------------------------------------------
 def pair_tables(page, boards):
     """Match each board to the table under its caption."""
     tables = K.board_tables(page)
     pairs = []
     for index, board in enumerate(boards[:len(tables)]):
-        word = board.get("label", "").lower()
-        captions = [s for s in page.text_shapes()
-                    if word and s.first_line().lower()
-                    .startswith(word)]
+        caption = caption_for(page, board)
         table = tables[index]
-        if captions:
-            x = captions[0].rect.x
+        if caption:
+            x = caption.rect.x
             table = min(tables, key=lambda t: abs(t.rect.x - x))
         pairs.append((table, board))
     return pairs

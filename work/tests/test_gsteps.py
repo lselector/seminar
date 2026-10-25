@@ -258,20 +258,16 @@ def test_toc_skips_a_box_holding_only_a_date():
 
 
 # --------------------------------------------------------------
-def test_toc_takes_only_the_captions_from_the_bench_tables():
-    """Model sizes, notes and the date are not topics."""
+def test_toc_lists_the_bench_tables_page_as_one_item():
+    """Captions, model sizes and the date are not topics."""
     deck = hand_bench_deck()
     page = deck.slide("g_bench")
     page.shapes.append(G.Shape(
         id="g_sizes", slide="g_bench", kind=G.KIND_TEXT,
         text="Claude Fable-5 - 6TB\nGLM-5.3 - 744B",
         rect=L.Rect(7.5, 0.6, 2, 2)))
-    link = " - https://lmarena.ai/leaderboard/text"
-    deck.shape("g_en").text = "English" + link
-    deck.shape("g_co").text = "Coding" + link + "/coding"
     lines = TOC.headlines(deck)
-    assert [l.split(" - ")[0] for l in lines] == \
-        ["English", "Coding"], lines
+    assert lines == ["LM Arena Leaderboard"], lines
 
 # --------------------------------------------------------------
 def test_toc_items_fit_one_line_without_links():
@@ -553,9 +549,11 @@ def hand_bench_deck():
         shape("g_date", G.KIND_TEXT, 4, 0.1,
               "Data for Sept 02"),
         shape("g_en", G.KIND_TEXT, 0.1, 0.6,
-              "English - https://x"),
+              "LM Arena Text\v"
+              "https://lmarena.ai/leaderboard/text "),
         shape("g_co", G.KIND_TEXT, 3.0, 0.6,
-              "Coding - https://y"),
+              "LM Arena Coding "
+              "https://lmarena.ai/leaderboard/text/coding"),
         shape("g_t_co", G.KIND_TABLE, 3.4, 1.0, cells=[
             head, ["■", "old-coder", "1500"],
             ["■", "same", "1400"]]),
@@ -568,10 +566,13 @@ def hand_bench_deck():
 
 
 BOARDS = [
-    {"label": "English", "cutoff": "2026-09-13", "entries": [
+    {"label": "English", "cutoff": "2026-09-13",
+     "url": "https://arena.ai/leaderboard/text", "entries": [
         {"name": "claude-fable-5", "score": 1506,
          "vendor": "anthropic", "url": "https://a/fable"}]},
-    {"label": "Coding", "cutoff": "2026-09-12", "entries": [
+    {"label": "Coding", "cutoff": "2026-09-12",
+     "url": "https://arena.ai/leaderboard/text/coding",
+     "entries": [
         {"name": "gpt-6", "score": 1543, "vendor": "openai",
          "url": "https://a/gpt"},
         {"name": "same", "score": 1401, "vendor": "other"}]},
@@ -580,11 +581,17 @@ BOARDS = [
 
 # --------------------------------------------------------------
 def test_bench_tables_are_matched_by_their_captions():
-    """English goes to the table under English, not by order."""
-    page = hand_bench_deck().slide("g_bench")
+    """Each board goes to the table under its own link."""
+    deck = hand_bench_deck()
+    page = deck.slide("g_bench")
     pairs = BENCH.pair_tables(page, BOARDS)
     assert [(t.id, b["label"]) for t, b in pairs] == \
         [("g_t_en", "English"), ("g_t_co", "Coding")]
+    deck.shape("g_en").rect = L.Rect(3.0, 0.6, 3, 1)
+    deck.shape("g_co").rect = L.Rect(0.1, 0.6, 3, 1)
+    pairs = BENCH.pair_tables(page, BOARDS)
+    assert [(t.id, b["label"]) for t, b in pairs] == \
+        [("g_t_co", "English"), ("g_t_en", "Coding")]
 
 
 # --------------------------------------------------------------

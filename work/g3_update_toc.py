@@ -10,9 +10,9 @@ when a slide was last updated) are skipped, and so are the
 slides the archive decks leave out of the contents: the
 script's
 Benchmarks page, the YouTube promo, About the Speaker and
-Thank You. On your own benchmarks page (the Code | Model |
-Score tables) only the board captions count, the boxes with
-an arena.ai leaderboard link.
+Thank You. Your own benchmarks page (the Code | Model |
+Score tables) is one item, "LM Arena Leaderboard", whatever
+its boxes say.
 
 Each item is a short label on one line: a bold blue bulleted
 list with no links or details, in four boxes, two a side:
@@ -27,8 +27,8 @@ that is what it takes for every item to fit. A skill can
 pass labels for headlines; "-" leaves a headline out, and
 headlines given the same label are listed once:
 
-    {"toc": {"English - https://lmarena.ai/...": "LM Arena",
-             "Coding - https://lmarena.ai/...": "LM Arena"},
+    {"toc": {"Tech Layoffs by year (US only):": "Jobs & Layoffs",
+             "The Tech Layoff Tracker": "Jobs & Layoffs"},
      "epigraph": "Agents got their own computers."}
 
 Labels are kept in the contents slide's speaker notes, so a
@@ -50,7 +50,7 @@ Usage:
     python3 g3_update_toc.py --json toc.json  labels, epigraph
 
 Created: 2026-09-14
-Last updated: 2026-10-11
+Last updated: 2026-10-25
 """
 
 import re
@@ -76,10 +76,9 @@ TRIM = " -–—:|,;.●"
 DANGLING = {"a", "an", "and", "as", "at", "by", "for", "from",
             "in", "of", "on", "or", "the", "to", "with"}
 
-# On your benchmarks page only the board captions count
-# ("English - https://lmarena.ai/..."); the Elo note, the date
-# and the model sizes are not topics.
-ARENA_LINK = "arena.ai/leaderboard"
+# Your benchmarks page is listed as this one item; its
+# captions, Elo note, date and model sizes are not topics.
+BENCH_ITEM = "LM Arena Leaderboard"
 
 # Pages the archive decks keep out of the contents.
 NOT_IN_TOC = {T.PAGE_TOC, T.PAGE_BENCH, T.PAGE_YOUTUBE,
@@ -182,13 +181,13 @@ def headlines(deck):
     for slide in deck.main():
         if slide.id in NOT_IN_TOC:
             continue
+        if bench and slide.id == bench.id:
+            lines.append(BENCH_ITEM)
+            continue
         bottom = title_bottom(slide)
         for shape in slide.text_shapes():
             if in_title_row(shape, bottom) or \
                     G.is_placeholder(shape.text):
-                continue
-            if bench and slide.id == bench.id and \
-                    ARENA_LINK not in shape.text:
                 continue
             line = headline(shape)
             if W.DATE_WORDS.fullmatch(line):
