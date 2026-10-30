@@ -20,15 +20,18 @@ top 25 of each board and the vote cutoff date the Arena
 site publishes, then updates the slide.
 
 Page 2 is the author's design: title `"LM Arena" Leaderboard`,
-a `Data for Sept 13` box, red captions `English - <link>` and
-`Coding - <link>`, two tables headed Code | Model | Score,
+a `Data for Oct 22` box, captions `LM Arena Text <link>` and
+`LM Arena Coding <link>`, two tables headed Code | Model | Score,
 a colour legend, the `Starting Elo rating = 1000` note and
 the list of model sizes. `g1_new_deck.py` gives every new
 deck a copy of last week's page 2, so it always looks like
 this; its numbers are last week's until this step runs.
 
 - **Table page** (the usual case): fills each table in
-  place, matched by the caption above it (English, Coding).
+  place, matched by the board link in the caption above it
+  (`.../leaderboard/text`, `.../leaderboard/text/coding`);
+  the caption wording does not matter. With no such link,
+  boards go to tables left to right.
   A changed row gets the new model name and link, the vendor
   colour in the Code cell, and the score. The box holding a
   date gets the cutoff date. Nothing else is touched: the

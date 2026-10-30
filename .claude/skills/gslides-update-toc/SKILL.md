@@ -19,8 +19,11 @@ python3 g3_update_toc.py          # or: g3_update_toc.py 2026-09-25
 
 It lists the first line of every topic box from slide 1 to
 the separator, in the current slide order, including boxes
-the author added. Benchmarks, the YouTube page, About and
-Thank You are left out, as in the archive decks.
+the author added. The LM Arena page (the Code | Model |
+Score tables) is always one item, `LM Arena Leaderboard`,
+so it needs no labels. The script's own benchmarks page,
+the YouTube page, About and Thank You are left out, as in
+the archive decks.
 
 The contents is four boxes, two a side, filled by the
 script: left upper light yellow, left lower light green,
@@ -57,8 +60,6 @@ label for every long or messy one and pass them:
 ```bash
 cat > /tmp/toc.json <<'EOF'
 {"toc": {
-  "English - https://lmarena.ai/leaderboard/text": "Crowd-sourced LM Arena",
-  "Coding - https://lmarena.ai/leaderboard/text/coding": "Crowd-sourced LM Arena",
   "OpenAI shelves its 2026 IPO as Anthropic heads to Nasdaq": "OpenAI Delays IPO, Anthropic to Nasdaq",
   "Tech Layoffs by year (US only):": "Jobs & Layoffs",
   "Benchmarks and cost:": "-"
@@ -73,7 +74,7 @@ Rules for labels, as in the archive decks:
 - About 40 characters or fewer, Title Case, the concrete
   thing: `OpenAI GPT-6 Astra`, `DeepSeek V4.1 Flash Release`.
 - Give several boxes of one slide the same label to list
-  them once (benchmarks, layoffs).
+  them once (layoffs).
 - `"-"` leaves out a line that is not a topic, such as a
   sub-heading. A box holding only a date (`Oct 8`, when a
   slide was updated) is left out by the script itself.
